@@ -1,6 +1,6 @@
 # Uniport
 
-[![npm version](https://img.shields.io/npm/v/uniport.svg)](https://www.npmjs.com/package/uniport)
+[![npm version](https://img.shields.io/npm/v/uniport-sdk.svg)](https://www.npmjs.com/package/uniport-sdk)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Cross-chain payment SDK. Accept crypto payments from any blockchain with one line of code.
@@ -10,13 +10,13 @@ Cross-chain payment SDK. Accept crypto payments from any blockchain with one lin
 ## Installation
 
 ```bash
-npm install uniport
+npm install uniport-sdk
 ```
 
 ## Quick Start
 
 ```tsx
-import { initUniport, UniportButton } from 'uniport'
+import { initUniport, UniportButton } from 'uniport-sdk'
 
 // Initialize once at app startup
 // Get your API key from https://partners.near-intents.org/
@@ -37,8 +37,8 @@ That's it! Users can now pay you from 21+ blockchains. The token received is USD
 
 | Prop | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
-| `recipient` | `string` | ✅ | - | Sui wallet address to receive payment |
-| `destinationToken` | `'suiUSDC' \| 'suiSUI'` | ❌ | `'suiUSDC'` | Token to receive on Sui |
+| `recipient` | `string` | ✅ | - | Recipient wallet address |
+| `destinationToken` | - | ❌ | `'suiUSDC'` | Token to receive on Sui |
 | `amount` | `string` | ❌ | - | Fixed amount (user selects if omitted) |
 | `refundAddress` | `string` | ❌ | - | Refund address if payment fails* |
 | `label` | `string` | ❌ | `'Pay with Crypto'` | Button text |

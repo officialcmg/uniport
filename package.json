@@ -1,6 +1,6 @@
 {
-    "name": "uniport",
-    "version": "1.0.1",
+    "name": "uniport-sdk",
+    "version": "0.0.1",
     "description": "Cross-chain payment SDK - Accept crypto payments from any blockchain",
     "type": "module",
     "main": "./dist/index.cjs",
