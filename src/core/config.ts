@@ -1,59 +1,15 @@
 /**
  * Uniport SDK Configuration
- */
-
-import { OpenAPI } from '@defuse-protocol/one-click-sdk-typescript';
-
-export interface UniportConfig {
-    /** NEAR API key for 1Click service */
-    apiKey: string;
-    /** API base URL (default: production) */
-    baseUrl?: string;
-    /** Default referral ID */
-    referral?: string;
-}
-
-let _config: UniportConfig | null = null;
-
-/**
- * Initialize the Uniport SDK
  *
- * @example
- * ```ts
- * import { initUniport } from 'uniport'
- *
- * initUniport({
- *   apiKey: 'your-near-api-key',
- * })
- * ```
+ * The SDK connects to the Uniport backend which securely handles
+ * API keys and 1Click SDK interactions. No API key is needed on the frontend.
  */
-export function initUniport(config: UniportConfig): void {
-    _config = config;
 
-    if (!config.apiKey) {
-        throw new Error("Uniport SDK Error: apiKey is required. Pass your NEAR API key to initUniport().");
-    }
+/** Default backend URL (Railway production) */
+const DEFAULT_BACKEND_URL = 'https://uniport-backend-production.up.railway.app';
 
-    // Configure the underlying 1Click SDK
-    OpenAPI.BASE = config.baseUrl || 'https://1click.chaindefuser.com';
-    OpenAPI.TOKEN = config.apiKey;
-}
-
-/**
- * Get the current SDK configuration
- */
-export function getConfig(): UniportConfig {
-    if (!_config) {
-        throw new Error(
-            'Uniport SDK not initialized. Call initUniport() first.'
-        );
-    }
-    return _config;
-}
-
-/**
- * Check if SDK is initialized
- */
-export function isInitialized(): boolean {
-    return _config !== null;
-}
+/** Backend URL — can be overridden via environment variable for local dev */
+export const BACKEND_URL: string =
+    (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_UNIPORT_BACKEND_URL) ||
+    (typeof window !== 'undefined' && (window as any).__UNIPORT_BACKEND_URL__) ||
+    DEFAULT_BACKEND_URL;

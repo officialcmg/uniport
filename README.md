@@ -16,22 +16,16 @@ npm install uniport-sdk
 ## Quick Start
 
 ```tsx
-import { initUniport, UniportButton } from 'uniport-sdk'
+import { UniportButton } from 'uniport-sdk'
 
-// Initialize once at app startup
-// Get your API key from https://partners.near-intents.org/
-initUniport({
-  apiKey: 'your-near-intents-api-key',
-})
-
-// Add the payment button
+// That's it — no initialization needed!
 <UniportButton
   recipient="0x..." // Your Sui wallet address
   onSuccess={(result) => console.log('Paid!', result.txHash)}
 />
 ```
 
-That's it! Users can now pay you from 21+ blockchains. The token received is USDC on Sui by default.
+That's it! No API keys, no initialization. Users can now pay you from 21+ blockchains. The token received is USDC on Sui by default.
 
 ## UniportButton Props
 

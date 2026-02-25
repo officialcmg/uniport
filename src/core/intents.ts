@@ -1,17 +1,12 @@
 /**
  * Uniport Intents Service
  *
- * Core functions for cross-chain swaps via 1Click SDK
+ * Core functions for cross-chain swaps via the Uniport backend.
+ * All 1Click SDK logic lives server-side — the SDK just fetches.
  */
 
-import {
-    OpenAPI,
-    OneClickService,
-    QuoteRequest,
-    ApiError,
-} from '@defuse-protocol/one-click-sdk-typescript';
 import type { Token } from './tokens';
-import { getConfig, isInitialized } from './config';
+import { BACKEND_URL } from './config';
 
 // ============================================================================
 // TYPES
@@ -131,21 +126,10 @@ export function generateDeadline(hoursFromNow = 1): string {
 // CORE SERVICE FUNCTIONS
 // ============================================================================
 
-function ensureInitialized() {
-    if (!isInitialized()) {
-        throw new Error(
-            'Uniport SDK not initialized. Call initUniport() first.'
-        );
-    }
-}
-
 /**
  * Get a quote for a cross-chain swap
  */
 export async function getQuote(options: QuoteOptions): Promise<QuoteResult> {
-    ensureInitialized();
-    const config = getConfig();
-
     const {
         originToken,
         destinationToken,
@@ -156,50 +140,49 @@ export async function getQuote(options: QuoteOptions): Promise<QuoteResult> {
         swapType = 'EXACT_INPUT',
         deadline,
         dry = false,
-        referral = config.referral || 'uniport',
+        referral = 'uniport',
     } = options;
 
     const amountInSmallestUnits = toSmallestUnits(amount, originToken.decimals);
 
-    const quoteRequest: QuoteRequest = {
-        dry,
-        swapType: QuoteRequest.swapType[swapType],
-        slippageTolerance,
-        originAsset: originToken.assetId,
-        depositType: QuoteRequest.depositType.ORIGIN_CHAIN,
-        destinationAsset: destinationToken.assetId,
-        amount: amountInSmallestUnits,
-        refundTo,
-        refundType: QuoteRequest.refundType.ORIGIN_CHAIN,
-        recipient,
-        recipientType: QuoteRequest.recipientType.DESTINATION_CHAIN,
-        deadline: deadline?.toISOString() || generateDeadline(1),
-        referral,
-    };
+    const response = await fetch(`${BACKEND_URL}/api/quote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            dry,
+            swapType,
+            slippageTolerance,
+            originAsset: originToken.assetId,
+            destinationAsset: destinationToken.assetId,
+            amount: amountInSmallestUnits,
+            refundTo,
+            recipient,
+            deadline: deadline?.toISOString() || generateDeadline(1),
+            referral,
+        }),
+    });
 
-    try {
-        const response = await OneClickService.getQuote(quoteRequest);
-        const quote = response.quote;
-
-        return {
-            depositAddress: quote.depositAddress || '',
-            memo: quote.depositMemo,
-            amountIn: quote.amountIn,
-            amountOut: quote.amountOut,
-            amountOutFormatted: quote.amountOutFormatted,
-            amountOutUsd: quote.amountOutUsd,
-            deadline: quote.deadline,
-            timeWhenInactive: quote.timeWhenInactive,
-            correlationId: response.correlationId,
-        };
-    } catch (error) {
-        if (error instanceof ApiError) {
-            throw new Error(
-                `Quote failed (${error.status}): ${JSON.stringify(error.body)}`
-            );
-        }
-        throw error;
+    if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        throw new Error(
+            `Quote failed (${response.status}): ${JSON.stringify(errorBody)}`
+        );
     }
+
+    const data = await response.json();
+    const quote = data.quote;
+
+    return {
+        depositAddress: quote.depositAddress || '',
+        memo: quote.depositMemo,
+        amountIn: quote.amountIn,
+        amountOut: quote.amountOut,
+        amountOutFormatted: quote.amountOutFormatted,
+        amountOutUsd: quote.amountOutUsd,
+        deadline: quote.deadline,
+        timeWhenInactive: quote.timeWhenInactive,
+        correlationId: data.correlationId,
+    };
 }
 
 /**
@@ -211,24 +194,17 @@ export async function submitDepositTx(params: {
     memo?: string;
     nearSenderAccount?: string;
 }): Promise<void> {
-    ensureInitialized();
+    const response = await fetch(`${BACKEND_URL}/api/deposit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+    });
 
-    const { txHash, depositAddress, memo, nearSenderAccount } = params;
-
-    try {
-        await OneClickService.submitDepositTx({
-            txHash,
-            depositAddress,
-            memo,
-            nearSenderAccount,
-        });
-    } catch (error) {
-        if (error instanceof ApiError) {
-            throw new Error(
-                `Submit deposit failed (${error.status}): ${JSON.stringify(error.body)}`
-            );
-        }
-        throw error;
+    if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        throw new Error(
+            `Submit deposit failed (${response.status}): ${JSON.stringify(errorBody)}`
+        );
     }
 }
 
@@ -239,41 +215,21 @@ export async function getExecutionStatus(
     depositAddress: string,
     memo?: string
 ): Promise<StatusResult> {
-    ensureInitialized();
-
-    try {
-        const response = await OneClickService.getExecutionStatus(
-            depositAddress,
-            memo
-        );
-
-        const status = response.status as ExecutionStatus;
-        const isComplete = ['SUCCESS', 'REFUNDED', 'FAILED'].includes(status);
-        const isSuccess = status === 'SUCCESS';
-
-        const swapDetails = response.swapDetails;
-        const destinationTxHashes =
-            swapDetails?.destinationChainTxHashes?.map((tx) => tx.hash);
-        const originTxHashes = swapDetails?.originChainTxHashes?.map(
-            (tx) => tx.hash
-        );
-
-        return {
-            status,
-            isComplete,
-            isSuccess,
-            correlationId: response.correlationId,
-            destinationTxHashes,
-            originTxHashes,
-        };
-    } catch (error) {
-        if (error instanceof ApiError) {
-            throw new Error(
-                `Status check failed (${error.status}): ${JSON.stringify(error.body)}`
-            );
-        }
-        throw error;
+    const url = new URL(`${BACKEND_URL}/api/status/${encodeURIComponent(depositAddress)}`);
+    if (memo) {
+        url.searchParams.set('memo', memo);
     }
+
+    const response = await fetch(url.toString());
+
+    if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        throw new Error(
+            `Status check failed (${response.status}): ${JSON.stringify(errorBody)}`
+        );
+    }
+
+    return await response.json();
 }
 
 /**
@@ -315,6 +271,3 @@ export async function pollExecutionStatus(
 
     throw new Error(`Timeout waiting for swap completion after ${timeout}ms`);
 }
-
-// Re-export for convenience
-export { OpenAPI, OneClickService, ApiError };
