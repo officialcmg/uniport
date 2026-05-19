@@ -14,9 +14,7 @@ import {
 } from '../core/intents';
 import {
     getSupportedChains,
-    getSuiDestinationTokens,
-    suiSUI,
-    suiUSDC,
+    getToken,
     type Token,
     type Chain,
 } from '../core/tokens';
@@ -25,7 +23,7 @@ import type { PaymentState } from '../types';
 export interface UseUniportPaymentOptions {
     recipient: string;
     refundAddress?: string;
-    destinationToken?: 'suiSUI' | 'suiUSDC';
+    destinationToken: string;
     amount?: string;
     onSuccess?: (result: { txHash: string; amount: string }) => void;
     onError?: (error: Error) => void;
@@ -49,7 +47,6 @@ export interface UseUniportPaymentReturn {
     // Data
     chains: Chain[];
     tokens: Token[];
-    destinationTokens: Token[];
 
     // Actions
     setSelectedChain: (chain: Chain) => void;
@@ -68,8 +65,15 @@ export function useUniportPayment(
     const { recipient, refundAddress, destinationToken, onSuccess, onError } =
         options;
 
-    // Get destination token
-    const destToken = destinationToken === 'suiSUI' ? suiSUI : suiUSDC;
+    // Get destination token by name string
+    const destToken = getToken(destinationToken);
+    if (!destToken) {
+        throw new Error(
+            `Invalid destinationToken: "${destinationToken}". ` +
+            `Use a valid token name like "suiUSDC", "ethereumUSDC", "baseETH", etc. ` +
+            `See the supported tokens table in the README.`
+        );
+    }
 
     // State
     const [paymentState, setPaymentState] = useState<PaymentState>('idle');
@@ -89,10 +93,9 @@ export function useUniportPayment(
     const lastStatusRef = useRef<ExecutionStatus | null>(null);
     const previewDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Get available chains/tokens
-    const chains = getSupportedChains().filter((c) => c.id !== 'sui');
+    // Get available chains/tokens — exclude the destination chain from source chains
+    const chains = getSupportedChains().filter((c) => c.id !== destToken.chain);
     const tokens = selectedChain?.tokens || [];
-    const destinationTokens = getSuiDestinationTokens();
 
     // Handle amount change with debounced preview
     const setAmount = useCallback(
@@ -289,7 +292,6 @@ export function useUniportPayment(
         destinationToken: destToken,
         chains,
         tokens,
-        destinationTokens,
         setSelectedChain: handleChainSelect,
         setSelectedToken: handleTokenSelect,
         setAmount,

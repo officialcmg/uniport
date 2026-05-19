@@ -10,12 +10,12 @@
 
 /** Props for the UniportButton component */
 export interface UniportButtonProps {
-    /** Recipient address on Sui */
+    /** Recipient address on the destination chain */
     recipient: string;
     /** Refund address (optional, will use connected wallet if not provided) */
     refundAddress?: string;
-    /** Destination token on Sui (default: suiUSDC) */
-    destinationToken?: 'suiSUI' | 'suiUSDC';
+    /** Destination token name (e.g. 'suiUSDC', 'ethereumUSDC', 'baseETH'). See supported tokens table in README. */
+    destinationToken: string;
     /** Request a specific amount (in destination token units) */
     amount?: string;
     /** Button label */
@@ -40,12 +40,12 @@ export interface UniportModalProps {
     open: boolean;
     /** Callback to close the modal */
     onClose: () => void;
-    /** Recipient address on Sui */
+    /** Recipient address on the destination chain */
     recipient: string;
     /** Optional refund address */
     refundAddress?: string;
-    /** Destination token */
-    destinationToken?: 'suiSUI' | 'suiUSDC';
+    /** Destination token name (e.g. 'suiUSDC', 'ethereumUSDC', 'baseETH') */
+    destinationToken: string;
     /** Amount to request */
     amount?: string;
     /** Callback when payment completes */

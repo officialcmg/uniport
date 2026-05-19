@@ -20,19 +20,20 @@ import { UniportButton } from 'uniport-sdk'
 
 // That's it — no initialization needed!
 <UniportButton
-  recipient="0x..." // Your Sui wallet address
+  recipient="0x..."
+  destinationToken="suiUSDC"
   onSuccess={(result) => console.log('Paid!', result.txHash)}
 />
 ```
 
-That's it! No API keys, no initialization. Users can now pay you from 21+ blockchains. The token received is USDC on Sui by default.
+That's it! No API keys, no initialization. Users can now pay you from 21+ blockchains.
 
 ## UniportButton Props
 
 | Prop | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
-| `recipient` | `string` | ✅ | - | Recipient wallet address |
-| `destinationToken` | - | ❌ | `'suiUSDC'` | Token to receive on Sui |
+| `recipient` | `string` | ✅ | - | Recipient wallet address on the destination chain |
+| `destinationToken` | `string` | ✅ | - | Token to receive. **Must be a valid token name from the table below.** |
 | `amount` | `string` | ❌ | - | Fixed amount (user selects if omitted) |
 | `refundAddress` | `string` | ❌ | - | Refund address if payment fails* |
 | `label` | `string` | ❌ | `'Pay with Crypto'` | Button text |
@@ -53,30 +54,69 @@ That's it! No API keys, no initialization. Users can now pay you from 21+ blockc
 
 ## Supported Chains & Tokens
 
-| Chain | Tokens |
-|-------|--------|
-| **Sui** (destination) | SUI, USDC |
-| **Ethereum** | ETH, USDC, USDT, WBTC, DAI, AAVE, UNI, LINK, SHIB, PEPE, TURBO, SAFE |
-| **Solana** | SOL, USDC, USDT, TRUMP, WIF, MELANIA |
-| **Bitcoin** | BTC |
-| **Optimism** | ETH, USDC, USDT, OP |
-| **Base** | ETH, USDC, cbBTC, BRETT |
-| **Polygon** | POL, USDC, USDT |
-| **Arbitrum** | ETH, USDC, USDT, ARB, GMX |
-| **Avalanche** | AVAX, USDC, USDT |
-| **BSC** | BNB, USDC, USDT |
-| **TON** | TON, USDT |
-| **Tron** | TRX, USDT |
-| **NEAR** | wNEAR, USDC, USDT |
-| **Cardano** | ADA |
-| **XRP Ledger** | XRP |
-| **Dogecoin** | DOGE |
-| **Litecoin** | LTC |
-| **Bitcoin Cash** | BCH |
-| **Aptos** | APT |
-| **Starknet** | STRK |
-| **Berachain** | BERA |
-| **Zcash** | ZEC |
+> **Important**: The `destinationToken` prop must be set to one of the **exact string values** shown in the **Token Name** column below. For example: `destinationToken="suiUSDC"` or `destinationToken="arbitrumUSDC"`.
+
+| Chain | Token Name (use in `destinationToken`) | Symbol |
+|-------|---------------------------------------|--------|
+| **Sui** | `suiSUI` | SUI |
+| **Sui** | `suiUSDC` | USDC |
+| **Ethereum** | `ethETH` | ETH |
+| **Ethereum** | `ethUSDC` | USDC |
+| **Ethereum** | `ethUSDT` | USDT |
+| **Ethereum** | `ethWBTC` | WBTC |
+| **Ethereum** | `ethDAI` | DAI |
+| **Ethereum** | `ethAAVE` | AAVE |
+| **Ethereum** | `ethUNI` | UNI |
+| **Ethereum** | `ethLINK` | LINK |
+| **Ethereum** | `ethSHIB` | SHIB |
+| **Ethereum** | `ethPEPE` | PEPE |
+| **Ethereum** | `ethTURBO` | TURBO |
+| **Ethereum** | `ethSAFE` | SAFE |
+| **Solana** | `solSOL` | SOL |
+| **Solana** | `solUSDC` | USDC |
+| **Solana** | `solUSDT` | USDT |
+| **Solana** | `solTRUMP` | TRUMP |
+| **Solana** | `sol$WIF` | $WIF |
+| **Solana** | `solMELANIA` | MELANIA |
+| **Bitcoin** | `btcBTC` | BTC |
+| **Arbitrum** | `arbETH` | ETH |
+| **Arbitrum** | `arbUSDC` | USDC |
+| **Arbitrum** | `arbUSDT` | USDT |
+| **Arbitrum** | `arbARB` | ARB |
+| **Arbitrum** | `arbGMX` | GMX |
+| **Base** | `baseETH` | ETH |
+| **Base** | `baseUSDC` | USDC |
+| **Base** | `basecbBTC` | cbBTC |
+| **Base** | `baseBRETT` | BRETT |
+| **Optimism** | `opETH` | ETH |
+| **Optimism** | `opUSDC` | USDC |
+| **Optimism** | `opUSDT` | USDT |
+| **Optimism** | `opOP` | OP |
+| **Polygon** | `polPOL` | POL |
+| **Polygon** | `polUSDC` | USDC |
+| **Polygon** | `polUSDT` | USDT |
+| **Avalanche** | `avaxAVAX` | AVAX |
+| **Avalanche** | `avaxUSDC` | USDC |
+| **Avalanche** | `avaxUSDT` | USDT |
+| **BNB Chain** | `bscBNB` | BNB |
+| **BNB Chain** | `bscUSDC` | USDC |
+| **BNB Chain** | `bscUSDT` | USDT |
+| **TON** | `tonTON` | TON |
+| **TON** | `tonUSDT` | USDT |
+| **Tron** | `tronTRX` | TRX |
+| **Tron** | `tronUSDT` | USDT |
+| **NEAR** | `nearwNEAR` | wNEAR |
+| **NEAR** | `nearUSDC` | USDC |
+| **NEAR** | `nearUSDT` | USDT |
+| **Cardano** | `cardanoADA` | ADA |
+| **XRP Ledger** | `xrpXRP` | XRP |
+| **Dogecoin** | `dogeDOGE` | DOGE |
+| **Litecoin** | `ltcLTC` | LTC |
+| **Bitcoin Cash** | `bchBCH` | BCH |
+| **Aptos** | `aptosAPT` | APT |
+| **Starknet** | `starknetSTRK` | STRK |
+| **Berachain** | `beraBERA` | BERA |
+| **Zcash** | `zecZEC` | ZEC |
 
 ## Features
 
@@ -85,6 +125,7 @@ That's it! No API keys, no initialization. Users can now pay you from 21+ blockc
 - 💎 Premium glassmorphism UI
 - 📱 Mobile-responsive modal
 - 🔧 Zero wallet connection required from payers
+- 🔑 Zero API keys needed for developers
 
 ## Advanced Usage
 

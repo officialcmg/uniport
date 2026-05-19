@@ -82,7 +82,7 @@ const buttonStyles = {
 export function UniportButton({
     recipient,
     refundAddress,
-    destinationToken = 'suiUSDC',
+    destinationToken,
     amount,
     label = 'Pay with Crypto',
     variant = 'default',

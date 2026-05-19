@@ -6,7 +6,7 @@
  */
 
 /** Default backend URL (Railway production) */
-const DEFAULT_BACKEND_URL = 'https://uniport-backend-production.up.railway.app';
+const DEFAULT_BACKEND_URL = 'http://localhost:3001';
 
 /** Backend URL — can be overridden via environment variable for local dev */
 export const BACKEND_URL: string =

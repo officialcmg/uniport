@@ -16,7 +16,7 @@ export const TOKEN_ICONS = {
     // Stablecoins
     USDC: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
     USDT: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo.png',
-    DAI: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x6B175474E89094C44Da98b954EesdfdsfdC495271d0F/logo.png',
+    DAI: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x6B175474E89094C44Da98b954EedeEC495271d0F/logo.png',
 
     // Major tokens
     ETH: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
@@ -54,17 +54,17 @@ export const TOKEN_ICONS = {
     PEPE: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x6982508145454Ce325dDbE47a25d4ec3d2311933/logo.png',
 
     // Ecosystem tokens
-    STRK: 'https://assets.coingecko.com/coins/images/26433/standard/starknet.png',
-    BERA: 'https://assets.coingecko.com/coins/images/34286/standard/bera.png',
+    STRK: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/starknet/info/logo.png',
+    BERA: 'https://s2.coinmarketcap.com/static/img/coins/64x64/31645.png',
     GNO: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x6810e776880C02933D47DB1b9fc05908e5386b96/logo.png',
-    MON: 'https://assets.coingecko.com/coins/images/35887/standard/monad.png',
+    MON: 'https://s2.coinmarketcap.com/static/img/coins/64x64/33868.png',
     ZEC: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/zcash/info/logo.png',
 
     // Meme coins
-    TRUMP: 'https://assets.coingecko.com/coins/images/53746/standard/trump.jpg',
-    WIF: 'https://assets.coingecko.com/coins/images/33566/standard/dogwifhat.jpg',
-    BRETT: 'https://assets.coingecko.com/coins/images/35529/standard/brett.png',
-    TURBO: 'https://assets.coingecko.com/coins/images/30116/standard/turbo.png',
+    TRUMP: 'https://s2.coinmarketcap.com/static/img/coins/64x64/35336.png',
+    WIF: 'https://s2.coinmarketcap.com/static/img/coins/64x64/28752.png',
+    BRETT: 'https://s2.coinmarketcap.com/static/img/coins/64x64/29743.png',
+    TURBO: 'https://s2.coinmarketcap.com/static/img/coins/64x64/24911.png',
 
     // Default fallback
     DEFAULT: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
@@ -92,9 +92,9 @@ export const CHAIN_ICONS = {
     cardano: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/cardano/info/logo.png',
     aptos: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/aptos/info/logo.png',
     gnosis: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/xdai/info/logo.png',
-    starknet: 'https://assets.coingecko.com/coins/images/26433/standard/starknet.png',
-    bera: 'https://assets.coingecko.com/coins/images/34286/standard/bera.png',
-    monad: 'https://assets.coingecko.com/coins/images/35887/standard/monad.png',
+    starknet: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/starknet/info/logo.png',
+    bera: 'https://s2.coinmarketcap.com/static/img/coins/64x64/31645.png',
+    monad: 'https://s2.coinmarketcap.com/static/img/coins/64x64/33868.png',
     doge: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/doge/info/logo.png',
     ltc: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/litecoin/info/logo.png',
     bch: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/bitcoincash/info/logo.png',
@@ -162,7 +162,7 @@ function createToken(
 }
 
 // ============================================================================
-// SUI TOKENS (Destination chain for Uniport!)
+// SUI TOKENS
 // ============================================================================
 
 export const suiSUI = createToken('sui', 'SUI', 'nep141:sui.omft.near', 9);
@@ -474,10 +474,6 @@ export function getSupportedChains(): Chain[] {
     return Object.values(CHAINS).filter(c => c.tokens.length > 0);
 }
 
-/** Get SUI destination tokens (for Uniport) */
-export function getSuiDestinationTokens(): Token[] {
-    return CHAINS.sui.tokens;
-}
 
 // Export for convenience
 export default {
@@ -489,5 +485,5 @@ export default {
     getTokensByChain,
     getTokenByAssetId,
     getSupportedChains,
-    getSuiDestinationTokens,
+
 };

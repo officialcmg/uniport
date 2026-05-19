@@ -320,7 +320,7 @@ export function UniportModal({
     onClose,
     recipient,
     refundAddress,
-    destinationToken = 'suiUSDC',
+    destinationToken,
     amount: initialAmount,
     onSuccess,
     onError,
@@ -444,7 +444,7 @@ export function UniportModal({
                             Payment Completed
                         </p>
                         <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px', marginBottom: '32px' }}>
-                            {payment.amount} {payment.selectedToken?.symbol} → ~{payment.quote?.amountOutFormatted || ''} {payment.destinationToken.symbol} on Sui
+                            {payment.amount} {payment.selectedToken?.symbol} → ~{payment.quote?.amountOutFormatted || ''} {payment.destinationToken.symbol}
                         </p>
 
                         {/* Show Receipt Link */}
@@ -468,7 +468,7 @@ export function UniportModal({
                                 ))}
                                 {payment.status?.destinationTxHashes?.map((hash, i) => (
                                     <div key={`dest-${i}`}>
-                                        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', marginBottom: '4px' }}>Destination TX (Sui)</p>
+                                        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', marginBottom: '4px' }}>Destination TX</p>
                                         <a href={`https://suiscan.xyz/mainnet/tx/${hash}`} target="_blank" rel="noopener noreferrer" style={{ color: '#60A5FA', fontSize: '13px', textDecoration: 'none', fontFamily: 'monospace' }}>
                                             {hash.slice(0, 10)}...{hash.slice(-8)} ↗
                                         </a>
@@ -561,7 +561,7 @@ export function UniportModal({
                                         <span style={styles.detailValue}>
                                             ~{payment.quote.amountOutFormatted}{' '}
                                             {payment.destinationToken.symbol}
-                                            <span style={styles.tokenBadge}>Sui</span>
+                                            <span style={styles.tokenBadge}>{payment.destinationToken.chain}</span>
                                         </span>
                                     </div>
                                 </div>
@@ -790,7 +790,7 @@ export function UniportModal({
                                     <div style={styles.detailRow}>
                                         <span>Destination</span>
                                         <span style={styles.detailValue}>
-                                            {payment.destinationToken.symbol} on Sui
+                                            {payment.destinationToken.symbol}
                                         </span>
                                     </div>
                                 </div>
