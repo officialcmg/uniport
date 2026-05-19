@@ -5,8 +5,8 @@
  * API keys and 1Click SDK interactions. No API key is needed on the frontend.
  */
 
-/** Default backend URL (Railway production) */
-const DEFAULT_BACKEND_URL = 'http://localhost:3001';
+/** Default backend URL (Render production) */
+const DEFAULT_BACKEND_URL = 'https://uniport-backend-u8b4.onrender.com';
 
 /** Backend URL — can be overridden via environment variable for local dev */
 export const BACKEND_URL: string =
