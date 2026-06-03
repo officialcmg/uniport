@@ -2,7 +2,7 @@
  * Uniport Token Definitions
  * 
  * Importable token constants for the Uniport SDK.
- * Usage: import { arbitrumUSDC, suiSUI, CHAINS } from 'uniport/tokens'
+ * Usage: import { arbitrumUSDC, solanaSOL, suiSUI, CHAINS } from 'uniport-sdk'
  * 
  * Token naming convention: {chain}{Symbol}
  * Example: arbitrumUSDC, ethereumETH, suiSUI
@@ -54,7 +54,7 @@ export const TOKEN_ICONS = {
     PEPE: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x6982508145454Ce325dDbE47a25d4ec3d2311933/logo.png',
 
     // Ecosystem tokens
-    STRK: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/starknet/info/logo.png',
+    STRK: 'https://coin-images.coingecko.com/coins/images/26433/large/starknet.png',
     BERA: 'https://s2.coinmarketcap.com/static/img/coins/64x64/31645.png',
     GNO: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x6810e776880C02933D47DB1b9fc05908e5386b96/logo.png',
     MON: 'https://s2.coinmarketcap.com/static/img/coins/64x64/33868.png',
@@ -92,7 +92,7 @@ export const CHAIN_ICONS = {
     cardano: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/cardano/info/logo.png',
     aptos: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/aptos/info/logo.png',
     gnosis: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/xdai/info/logo.png',
-    starknet: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/starknet/info/logo.png',
+    starknet: 'https://coin-images.coingecko.com/coins/images/26433/large/starknet.png',
     bera: 'https://s2.coinmarketcap.com/static/img/coins/64x64/31645.png',
     monad: 'https://s2.coinmarketcap.com/static/img/coins/64x64/33868.png',
     doge: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/doge/info/logo.png',
@@ -111,6 +111,8 @@ export type ChainId = keyof typeof CHAIN_ICONS;
 export interface Token {
     /** Readable name: arbitrumUSDC, suiSUI */
     name: string;
+    /** Backward-compatible identifiers accepted by the SDK */
+    aliases?: string[];
     /** Display symbol: USDC, SUI, ETH */
     symbol: string;
     /** 1Click API asset ID */
@@ -143,14 +145,27 @@ function createToken(
     symbol: string,
     assetId: string,
     decimals: number,
-    contractAddress?: string
+    contractAddress?: string,
+    options?: {
+        name?: string;
+        aliases?: string[];
+    }
 ): Token {
-    const name = `${chain}${symbol.replace('$', '').replace(' ', '')}`;
+    const normalizedSymbol = symbol.replace('$', '').replace(' ', '');
+    const canonicalPrefix = TOKEN_NAME_PREFIXES[chain] || chain;
+    const legacyName = `${chain}${normalizedSymbol}`;
+    const name = options?.name || `${canonicalPrefix}${normalizedSymbol}`;
     const icon = TOKEN_ICONS[symbol as keyof typeof TOKEN_ICONS] || TOKEN_ICONS.DEFAULT;
     const chainIcon = CHAIN_ICONS[chain];
+    const aliases = new Set(options?.aliases || []);
+
+    if (legacyName !== name) {
+        aliases.add(legacyName);
+    }
 
     return {
         name,
+        aliases: aliases.size > 0 ? Array.from(aliases) : undefined,
         symbol,
         assetId,
         chain,
@@ -160,6 +175,21 @@ function createToken(
         contractAddress,
     };
 }
+
+const TOKEN_NAME_PREFIXES: Partial<Record<ChainId, string>> = {
+    eth: 'ethereum',
+    arb: 'arbitrum',
+    op: 'optimism',
+    sol: 'solana',
+    btc: 'bitcoin',
+    pol: 'polygon',
+    avax: 'avalanche',
+    doge: 'dogecoin',
+    ltc: 'litecoin',
+    bch: 'bitcoinCash',
+    bera: 'berachain',
+    zec: 'zcash',
+};
 
 // ============================================================================
 // SUI TOKENS
@@ -201,7 +231,7 @@ export const arbitrumGMX = createToken('arb', 'GMX', 'nep141:arb-0xfc5a1a6eb076a
 
 export const baseETH = createToken('base', 'ETH', 'nep141:base.omft.near', 18);
 export const baseUSDC = createToken('base', 'USDC', 'nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near', 6, '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913');
-export const baseCbBTC = createToken('base', 'cbBTC', 'nep141:base-0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf.omft.near', 8, '0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf');
+export const baseCbBTC = createToken('base', 'cbBTC', 'nep141:base-0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf.omft.near', 8, '0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf', { name: 'baseCbBTC' });
 export const baseBRETT = createToken('base', 'BRETT', 'nep141:base-0x532f27101965dd16442e59d40670faf5ebb142e4.omft.near', 18, '0x532f27101965dd16442e59d40670faf5ebb142e4');
 
 // ============================================================================
@@ -283,7 +313,10 @@ export const berachainBERA = createToken('bera', 'BERA', 'nep141:bera.omft.near'
 export const zcashZEC = createToken('zec', 'ZEC', 'nep141:zec.omft.near', 8);
 
 // NEAR tokens
-export const nearNEAR = createToken('near', 'wNEAR', 'nep141:wrap.near', 24, 'wrap.near');
+export const nearNEAR = createToken('near', 'wNEAR', 'nep141:wrap.near', 24, 'wrap.near', {
+    name: 'nearNEAR',
+    aliases: ['nearwNEAR'],
+});
 export const nearUSDC = createToken('near', 'USDC', 'nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1', 6, '17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1');
 export const nearUSDT = createToken('near', 'USDT', 'nep141:usdt.tether-token.near', 6, 'usdt.tether-token.near');
 
@@ -456,7 +489,9 @@ export const ALL_TOKENS: Token[] = Object.values(CHAINS).flatMap(chain => chain.
 
 /** Get token by name, e.g. getToken('arbitrumUSDC') */
 export function getToken(name: string): Token | undefined {
-    return ALL_TOKENS.find(t => t.name === name);
+    return ALL_TOKENS.find((token) =>
+        token.name === name || token.aliases?.includes(name)
+    );
 }
 
 /** Get all tokens for a specific chain */

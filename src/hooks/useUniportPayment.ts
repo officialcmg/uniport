@@ -34,6 +34,7 @@ export interface UseUniportPaymentReturn {
     paymentState: PaymentState;
     quote: QuoteResult | null;
     previewQuote: QuoteResult | null;
+    previewError: Error | null;
     isLoadingPreview: boolean;
     status: StatusResult | null;
     error: Error | null;
@@ -42,6 +43,7 @@ export interface UseUniportPaymentReturn {
     selectedChain: Chain | null;
     selectedToken: Token | null;
     amount: string;
+    refundAddress: string;
     destinationToken: Token;
 
     // Data
@@ -52,9 +54,11 @@ export interface UseUniportPaymentReturn {
     setSelectedChain: (chain: Chain) => void;
     setSelectedToken: (token: Token) => void;
     setAmount: (amount: string) => void;
+    setRefundAddress: (refundAddress: string) => void;
     fetchQuote: () => Promise<void>;
     startPolling: () => void;
     stopPolling: () => void;
+    cancelQuote: () => void;
     reset: () => void;
     copyToClipboard: (text: string) => Promise<boolean>;
 }
@@ -62,15 +66,21 @@ export interface UseUniportPaymentReturn {
 export function useUniportPayment(
     options: UseUniportPaymentOptions
 ): UseUniportPaymentReturn {
-    const { recipient, refundAddress, destinationToken, onSuccess, onError } =
-        options;
+    const {
+        recipient,
+        refundAddress: initialRefundAddress,
+        destinationToken,
+        amount: initialAmount,
+        onSuccess,
+        onError,
+    } = options;
 
     // Get destination token by name string
     const destToken = getToken(destinationToken);
     if (!destToken) {
         throw new Error(
             `Invalid destinationToken: "${destinationToken}". ` +
-            `Use a valid token name like "suiUSDC", "ethereumUSDC", "baseETH", etc. ` +
+            `Use a valid token name like "suiUSDC", "arbitrumUSDC", "ethereumUSDC", or "baseETH". ` +
             `See the supported tokens table in the README.`
         );
     }
@@ -79,6 +89,7 @@ export function useUniportPayment(
     const [paymentState, setPaymentState] = useState<PaymentState>('idle');
     const [quote, setQuote] = useState<QuoteResult | null>(null);
     const [previewQuote, setPreviewQuote] = useState<QuoteResult | null>(null);
+    const [previewError, setPreviewError] = useState<Error | null>(null);
     const [isLoadingPreview, setIsLoadingPreview] = useState(false);
     const [status, setStatus] = useState<StatusResult | null>(null);
     const [error, setError] = useState<Error | null>(null);
@@ -86,71 +97,113 @@ export function useUniportPayment(
     // Selection state
     const [selectedChain, setSelectedChain] = useState<Chain | null>(null);
     const [selectedToken, setSelectedToken] = useState<Token | null>(null);
-    const [amount, setAmountState] = useState('');
+    const [amount, setAmountState] = useState(initialAmount ?? '');
+    const [refundAddress, setRefundAddressState] = useState(
+        initialRefundAddress ?? ''
+    );
 
     // Refs
     const pollingRef = useRef<NodeJS.Timeout | null>(null);
     const lastStatusRef = useRef<ExecutionStatus | null>(null);
     const previewDebounceRef = useRef<NodeJS.Timeout | null>(null);
+    const previewAbortRef = useRef<AbortController | null>(null);
 
     // Get available chains/tokens — exclude the destination chain from source chains
     const chains = getSupportedChains().filter((c) => c.id !== destToken.chain);
     const tokens = selectedChain?.tokens || [];
 
-    // Handle amount change with debounced preview
-    const setAmount = useCallback(
-        (newAmount: string) => {
-            setAmountState(newAmount);
+    const schedulePreviewQuote = useCallback(
+        (
+            nextAmount: string,
+            nextRefundAddress: string,
+            nextSelectedToken: Token | null
+        ) => {
             setPreviewQuote(null);
+            setPreviewError(null);
 
-            // Clear existing debounce
             if (previewDebounceRef.current) {
                 clearTimeout(previewDebounceRef.current);
             }
 
-            // Only fetch preview if we have required fields
-            if (newAmount && selectedToken && refundAddress) {
-                setIsLoadingPreview(true);
-
-                // Debounce 3 seconds
-                previewDebounceRef.current = setTimeout(async () => {
-                    try {
-                        const result = await getQuote({
-                            originToken: selectedToken,
-                            destinationToken: destToken,
-                            amount: newAmount,
-                            recipient,
-                            refundTo: refundAddress,
-                            dry: true, // Dry run for preview
-                        });
-                        setPreviewQuote(result);
-                    } catch (err) {
-                        console.warn('Preview quote failed:', err);
-                    } finally {
-                        setIsLoadingPreview(false);
-                    }
-                }, 3000);
-            } else {
-                setIsLoadingPreview(false);
+            if (previewAbortRef.current) {
+                previewAbortRef.current.abort();
+                previewAbortRef.current = null;
             }
+
+            if (!nextAmount || !nextSelectedToken || !nextRefundAddress) {
+                setIsLoadingPreview(false);
+                return;
+            }
+
+            setIsLoadingPreview(true);
+
+            previewDebounceRef.current = setTimeout(async () => {
+                const controller = new AbortController();
+                previewAbortRef.current = controller;
+
+                try {
+                    const result = await getQuote({
+                        originToken: nextSelectedToken,
+                        destinationToken: destToken,
+                        amount: nextAmount,
+                        recipient,
+                        refundTo: nextRefundAddress,
+                        dry: true,
+                        signal: controller.signal,
+                    });
+                    setPreviewQuote(result);
+                } catch (err) {
+                    if (err instanceof Error && err.name === 'AbortError') {
+                        return;
+                    }
+                    const previewFailure =
+                        err instanceof Error
+                            ? err
+                            : new Error('Failed to fetch estimate');
+                    setPreviewError(previewFailure);
+                    console.warn('Preview quote failed:', previewFailure);
+                } finally {
+                    if (previewAbortRef.current === controller) {
+                        previewAbortRef.current = null;
+                    }
+                    setIsLoadingPreview(false);
+                }
+            }, 250);
         },
-        [selectedToken, refundAddress, recipient, destToken]
+        [destToken, recipient]
+    );
+
+    const setAmount = useCallback(
+        (newAmount: string) => {
+            setAmountState(newAmount);
+            schedulePreviewQuote(newAmount, refundAddress, selectedToken);
+        },
+        [refundAddress, schedulePreviewQuote, selectedToken]
+    );
+
+    const setRefundAddress = useCallback(
+        (newRefundAddress: string) => {
+            setRefundAddressState(newRefundAddress);
+            schedulePreviewQuote(amount, newRefundAddress, selectedToken);
+        },
+        [amount, schedulePreviewQuote, selectedToken]
     );
 
     // Handle chain selection
     const handleChainSelect = useCallback((chain: Chain) => {
+        const nextToken = chain.tokens[0] || null;
         setSelectedChain(chain);
-        setSelectedToken(chain.tokens[0] || null);
+        setSelectedToken(nextToken);
         setPaymentState('selecting');
-        setPreviewQuote(null);
-    }, []);
+        schedulePreviewQuote(amount, refundAddress, nextToken);
+    }, [amount, refundAddress, schedulePreviewQuote]);
 
     // Handle token selection
     const handleTokenSelect = useCallback((token: Token) => {
         setSelectedToken(token);
         setPaymentState('selecting');
-        setPreviewQuote(null);
-    }, []);
+        schedulePreviewQuote(amount, refundAddress, token);
+    }, [amount, refundAddress, schedulePreviewQuote]);
 
     // Fetch quote (real, non-dry)
     const fetchQuote = useCallback(async () => {
@@ -190,6 +243,14 @@ export function useUniportPayment(
         onError,
     ]);
 
+    // Stop polling
+    const stopPolling = useCallback(() => {
+        if (pollingRef.current) {
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+        }
+    }, []);
+
     // Poll for status
     const pollStatus = useCallback(async () => {
         if (!quote?.depositAddress) return;
@@ -213,10 +274,14 @@ export function useUniportPayment(
                         txHash: result.destinationTxHashes?.[0] || '',
                         amount: quote.amountOut,
                     });
-                } else if (result.status === 'FAILED') {
+                } else if (result.isComplete) {
                     setPaymentState('error');
                     stopPolling();
-                    const err = new Error('Payment failed');
+                    const err = new Error(
+                        result.status === 'REFUNDED'
+                            ? 'Payment was refunded'
+                            : 'Payment failed'
+                    );
                     setError(err);
                     onError?.(err);
                 }
@@ -224,7 +289,7 @@ export function useUniportPayment(
         } catch (err) {
             console.error('Status poll error:', err);
         }
-    }, [quote, onSuccess, onError]);
+    }, [quote, onSuccess, onError, stopPolling]);
 
     // Start polling
     const startPolling = useCallback(() => {
@@ -232,14 +297,6 @@ export function useUniportPayment(
         pollStatus();
         pollingRef.current = setInterval(pollStatus, 3000);
     }, [pollStatus]);
-
-    // Stop polling
-    const stopPolling = useCallback(() => {
-        if (pollingRef.current) {
-            clearInterval(pollingRef.current);
-            pollingRef.current = null;
-        }
-    }, []);
 
     // Copy to clipboard
     const copyToClipboard = useCallback(async (text: string): Promise<boolean> => {
@@ -257,15 +314,32 @@ export function useUniportPayment(
         if (previewDebounceRef.current) {
             clearTimeout(previewDebounceRef.current);
         }
+        if (previewAbortRef.current) {
+            previewAbortRef.current.abort();
+            previewAbortRef.current = null;
+        }
         setPaymentState('idle');
         setQuote(null);
         setPreviewQuote(null);
         setIsLoadingPreview(false);
         setStatus(null);
         setError(null);
+        setPreviewError(null);
         setSelectedChain(null);
         setSelectedToken(null);
-        setAmountState('');
+        setAmountState(initialAmount ?? '');
+        setRefundAddressState(initialRefundAddress ?? '');
+        lastStatusRef.current = null;
+    }, [initialAmount, initialRefundAddress, stopPolling]);
+
+    // Cancel active quote without clearing chain/token/amount selection.
+    // Use this for mid-flow back navigation (QR → amount).
+    const cancelQuote = useCallback(() => {
+        stopPolling();
+        setPaymentState('selecting');
+        setQuote(null);
+        setStatus(null);
+        setError(null);
         lastStatusRef.current = null;
     }, [stopPolling]);
 
@@ -276,6 +350,10 @@ export function useUniportPayment(
             if (previewDebounceRef.current) {
                 clearTimeout(previewDebounceRef.current);
             }
+            if (previewAbortRef.current) {
+                previewAbortRef.current.abort();
+                previewAbortRef.current = null;
+            }
         };
     }, [stopPolling]);
 
@@ -283,21 +361,25 @@ export function useUniportPayment(
         paymentState,
         quote,
         previewQuote,
+        previewError,
         isLoadingPreview,
         status,
         error,
         selectedChain,
         selectedToken,
         amount,
+        refundAddress,
         destinationToken: destToken,
         chains,
         tokens,
         setSelectedChain: handleChainSelect,
         setSelectedToken: handleTokenSelect,
         setAmount,
+        setRefundAddress,
         fetchQuote,
         startPolling,
         stopPolling,
+        cancelQuote,
         reset,
         copyToClipboard,
     };

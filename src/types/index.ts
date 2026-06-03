@@ -12,7 +12,7 @@
 export interface UniportButtonProps {
     /** Recipient address on the destination chain */
     recipient: string;
-    /** Refund address (optional, will use connected wallet if not provided) */
+    /** Optional source-chain refund address to prefill in the modal */
     refundAddress?: string;
     /** Destination token name (e.g. 'suiUSDC', 'ethereumUSDC', 'baseETH'). See supported tokens table in README. */
     destinationToken: string;
@@ -26,6 +26,8 @@ export interface UniportButtonProps {
     disabled?: boolean;
     /** Class name for custom styling */
     className?: string;
+    /** Color theme for the modal */
+    theme?: 'light' | 'dark';
     /** Callback when payment completes */
     onSuccess?: (result: { txHash: string; amount: string }) => void;
     /** Callback when payment fails */
@@ -42,12 +44,14 @@ export interface UniportModalProps {
     onClose: () => void;
     /** Recipient address on the destination chain */
     recipient: string;
-    /** Optional refund address */
+    /** Optional source-chain refund address to prefill */
     refundAddress?: string;
     /** Destination token name (e.g. 'suiUSDC', 'ethereumUSDC', 'baseETH') */
     destinationToken: string;
     /** Amount to request */
     amount?: string;
+    /** Color theme */
+    theme?: 'light' | 'dark';
     /** Callback when payment completes */
     onSuccess?: (result: { txHash: string; amount: string }) => void;
     /** Callback when payment fails */

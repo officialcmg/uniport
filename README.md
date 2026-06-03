@@ -1,9 +1,9 @@
-# Uniport
+# Uniport SDK
 
 [![npm version](https://img.shields.io/npm/v/uniport-sdk.svg)](https://www.npmjs.com/package/uniport-sdk)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Cross-chain payment SDK. Accept crypto payments from any blockchain with one line of code.
+Cross-chain payment SDK for accepting crypto payments into a destination token you choose.
 
 [GitHub Repository](https://github.com/officialcmg/uniport)
 
@@ -18,118 +18,122 @@ npm install uniport-sdk
 ```tsx
 import { UniportButton } from 'uniport-sdk'
 
-// That's it — no initialization needed!
 <UniportButton
   recipient="0x..."
-  destinationToken="suiUSDC"
-  onSuccess={(result) => console.log('Paid!', result.txHash)}
+  destinationToken="arbitrumUSDC"
+  onSuccess={(result) => console.log('Paid', result.txHash)}
 />
 ```
 
-That's it! No API keys, no initialization. Users can now pay you from 21+ blockchains.
+The SDK uses Uniport's hosted backend. No API key or backend URL is required for standard integration.
 
 ## UniportButton Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `recipient` | `string` | ✅ | - | Recipient wallet address on the destination chain |
-| `destinationToken` | `string` | ✅ | - | Token to receive. **Must be a valid token name from the table below.** |
-| `amount` | `string` | ❌ | - | Fixed amount (user selects if omitted) |
-| `refundAddress` | `string` | ❌ | - | Refund address if payment fails* |
-| `label` | `string` | ❌ | `'Pay with Crypto'` | Button text |
-| `variant` | `'default' \| 'compact' \| 'outline'` | ❌ | `'default'` | Button style |
-| `disabled` | `boolean` | ❌ | `false` | Disable the button |
-| `className` | `string` | ❌ | - | Custom CSS class |
-| `onSuccess` | `(result) => void` | ❌ | - | Called when payment completes |
-| `onError` | `(error) => void` | ❌ | - | Called when payment fails |
-| `onOpenChange` | `(open) => void` | ❌ | - | Called when modal opens/closes |
+| Prop | Type | Required | Description |
+|------|------|----------|-------------|
+| `recipient` | `string` | Yes | Recipient wallet address on the destination chain |
+| `destinationToken` | `string` | Yes | Destination token name from the supported token table |
+| `amount` | `string` | No | Fixed amount in destination token units |
+| `refundAddress` | `string` | No | Source-chain refund address to prefill in the modal |
+| `label` | `string` | No | Button label |
+| `variant` | `'default' \| 'compact' \| 'outline'` | No | Button style |
+| `disabled` | `boolean` | No | Disable the button |
+| `className` | `string` | No | Custom CSS class |
+| `theme` | `'light' \| 'dark'` | No | Modal theme |
+| `onSuccess` | `(result) => void` | No | Called when payment completes |
+| `onError` | `(error) => void` | No | Called when payment fails |
+| `onOpenChange` | `(open) => void` | No | Called when modal opens or closes |
 
-> *Note: In a future version, refund address input will be added directly in the modal UI, removing the need to pass it as a prop.
+If `refundAddress` is omitted, the payer can enter it inside the modal. The refund address is on the source chain the payer sends from.
 
-### Button Variants
+## Supported Token Naming
 
-- **`default`** - Gradient purple button with shadow (recommended)
-- **`compact`** - Smaller version for tight spaces
-- **`outline`** - Transparent with purple border
+Use the canonical token names below as `destinationToken`. Examples:
 
-## Supported Chains & Tokens
+- `arbitrumUSDC`
+- `ethereumUSDC`
+- `solanaSOL`
+- `bitcoinBTC`
 
-> **Important**: The `destinationToken` prop must be set to one of the **exact string values** shown in the **Token Name** column below. For example: `destinationToken="suiUSDC"` or `destinationToken="arbitrumUSDC"`.
+Legacy short aliases such as `arbUSDC` and `ethUSDC` are still accepted for backward compatibility, but the canonical names below are the stable prop names to document and ship against.
 
-| Chain | Token Name (use in `destinationToken`) | Symbol |
-|-------|---------------------------------------|--------|
-| **Sui** | `suiSUI` | SUI |
-| **Sui** | `suiUSDC` | USDC |
-| **Ethereum** | `ethETH` | ETH |
-| **Ethereum** | `ethUSDC` | USDC |
-| **Ethereum** | `ethUSDT` | USDT |
-| **Ethereum** | `ethWBTC` | WBTC |
-| **Ethereum** | `ethDAI` | DAI |
-| **Ethereum** | `ethAAVE` | AAVE |
-| **Ethereum** | `ethUNI` | UNI |
-| **Ethereum** | `ethLINK` | LINK |
-| **Ethereum** | `ethSHIB` | SHIB |
-| **Ethereum** | `ethPEPE` | PEPE |
-| **Ethereum** | `ethTURBO` | TURBO |
-| **Ethereum** | `ethSAFE` | SAFE |
-| **Solana** | `solSOL` | SOL |
-| **Solana** | `solUSDC` | USDC |
-| **Solana** | `solUSDT` | USDT |
-| **Solana** | `solTRUMP` | TRUMP |
-| **Solana** | `sol$WIF` | $WIF |
-| **Solana** | `solMELANIA` | MELANIA |
-| **Bitcoin** | `btcBTC` | BTC |
-| **Arbitrum** | `arbETH` | ETH |
-| **Arbitrum** | `arbUSDC` | USDC |
-| **Arbitrum** | `arbUSDT` | USDT |
-| **Arbitrum** | `arbARB` | ARB |
-| **Arbitrum** | `arbGMX` | GMX |
-| **Base** | `baseETH` | ETH |
-| **Base** | `baseUSDC` | USDC |
-| **Base** | `basecbBTC` | cbBTC |
-| **Base** | `baseBRETT` | BRETT |
-| **Optimism** | `opETH` | ETH |
-| **Optimism** | `opUSDC` | USDC |
-| **Optimism** | `opUSDT` | USDT |
-| **Optimism** | `opOP` | OP |
-| **Polygon** | `polPOL` | POL |
-| **Polygon** | `polUSDC` | USDC |
-| **Polygon** | `polUSDT` | USDT |
-| **Avalanche** | `avaxAVAX` | AVAX |
-| **Avalanche** | `avaxUSDC` | USDC |
-| **Avalanche** | `avaxUSDT` | USDT |
-| **BNB Chain** | `bscBNB` | BNB |
-| **BNB Chain** | `bscUSDC` | USDC |
-| **BNB Chain** | `bscUSDT` | USDT |
-| **TON** | `tonTON` | TON |
-| **TON** | `tonUSDT` | USDT |
-| **Tron** | `tronTRX` | TRX |
-| **Tron** | `tronUSDT` | USDT |
-| **NEAR** | `nearwNEAR` | wNEAR |
-| **NEAR** | `nearUSDC` | USDC |
-| **NEAR** | `nearUSDT` | USDT |
-| **Cardano** | `cardanoADA` | ADA |
-| **XRP Ledger** | `xrpXRP` | XRP |
-| **Dogecoin** | `dogeDOGE` | DOGE |
-| **Litecoin** | `ltcLTC` | LTC |
-| **Bitcoin Cash** | `bchBCH` | BCH |
-| **Aptos** | `aptosAPT` | APT |
-| **Starknet** | `starknetSTRK` | STRK |
-| **Berachain** | `beraBERA` | BERA |
-| **Zcash** | `zecZEC` | ZEC |
+| Chain | Token Name | Symbol |
+|-------|------------|--------|
+| Sui | `suiSUI` | SUI |
+| Sui | `suiUSDC` | USDC |
+| Ethereum | `ethereumETH` | ETH |
+| Ethereum | `ethereumUSDC` | USDC |
+| Ethereum | `ethereumUSDT` | USDT |
+| Ethereum | `ethereumWBTC` | WBTC |
+| Ethereum | `ethereumDAI` | DAI |
+| Ethereum | `ethereumAAVE` | AAVE |
+| Ethereum | `ethereumUNI` | UNI |
+| Ethereum | `ethereumLINK` | LINK |
+| Ethereum | `ethereumSHIB` | SHIB |
+| Ethereum | `ethereumPEPE` | PEPE |
+| Ethereum | `ethereumTURBO` | TURBO |
+| Ethereum | `ethereumSAFE` | SAFE |
+| Solana | `solanaSOL` | SOL |
+| Solana | `solanaUSDC` | USDC |
+| Solana | `solanaUSDT` | USDT |
+| Solana | `solanaTRUMP` | TRUMP |
+| Solana | `solanaWIF` | $WIF |
+| Solana | `solanaMELANIA` | MELANIA |
+| Bitcoin | `bitcoinBTC` | BTC |
+| Arbitrum | `arbitrumETH` | ETH |
+| Arbitrum | `arbitrumUSDC` | USDC |
+| Arbitrum | `arbitrumUSDT` | USDT |
+| Arbitrum | `arbitrumARB` | ARB |
+| Arbitrum | `arbitrumGMX` | GMX |
+| Base | `baseETH` | ETH |
+| Base | `baseUSDC` | USDC |
+| Base | `baseCbBTC` | cbBTC |
+| Base | `baseBRETT` | BRETT |
+| Optimism | `optimismETH` | ETH |
+| Optimism | `optimismUSDC` | USDC |
+| Optimism | `optimismUSDT` | USDT |
+| Optimism | `optimismOP` | OP |
+| Polygon | `polygonPOL` | POL |
+| Polygon | `polygonUSDC` | USDC |
+| Polygon | `polygonUSDT` | USDT |
+| Avalanche | `avalancheAVAX` | AVAX |
+| Avalanche | `avalancheUSDC` | USDC |
+| Avalanche | `avalancheUSDT` | USDT |
+| BNB Chain | `bscBNB` | BNB |
+| BNB Chain | `bscUSDC` | USDC |
+| BNB Chain | `bscUSDT` | USDT |
+| TON | `tonTON` | TON |
+| TON | `tonUSDT` | USDT |
+| Tron | `tronTRX` | TRX |
+| Tron | `tronUSDT` | USDT |
+| NEAR | `nearNEAR` | wNEAR |
+| NEAR | `nearUSDC` | USDC |
+| NEAR | `nearUSDT` | USDT |
+| Cardano | `cardanoADA` | ADA |
+| XRP Ledger | `xrpXRP` | XRP |
+| Dogecoin | `dogecoinDOGE` | DOGE |
+| Litecoin | `litecoinLTC` | LTC |
+| Bitcoin Cash | `bitcoinCashBCH` | BCH |
+| Aptos | `aptosAPT` | APT |
+| Starknet | `starknetSTRK` | STRK |
+| Berachain | `berachainBERA` | BERA |
+| Zcash | `zcashZEC` | ZEC |
 
-## Features
+## Core Exports
 
-- 🌐 Accept payments from 21+ blockchains
-- ⚡ Sub-minute settlement via NEAR Intents
-- 💎 Premium glassmorphism UI
-- 📱 Mobile-responsive modal
-- 🔧 Zero wallet connection required from payers
-- 🔑 Zero API keys needed for developers
+The package exports:
 
-## Advanced Usage
+- `UniportButton`
+- `UniportModal`
+- `useUniportPayment`
+- `getQuote`
+- `submitDepositTx`
+- `getExecutionStatus`
+- token constants such as `arbitrumUSDC`, `ethereumUSDC`, and `solanaSOL`
 
-For custom implementations, the SDK also exports `UniportModal`, `useUniportPayment` hook, and core functions like `getQuote` and `getExecutionStatus`. See the source code for details.
+## Errors
+
+Backend request failures are surfaced as typed `UniportError` instances from the core module. Timeouts, quote failures, deposit submission failures, and status failures are normalized by the SDK before they reach your UI.
 
 ## License
 

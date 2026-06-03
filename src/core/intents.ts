@@ -6,7 +6,7 @@
  */
 
 import type { Token } from './tokens';
-import { BACKEND_URL } from './config';
+import { getUniportConfig } from './config';
 
 // ============================================================================
 // TYPES
@@ -18,6 +18,42 @@ export type SwapType =
     | 'EXACT_OUTPUT'
     | 'FLEX_INPUT'
     | 'ANY_INPUT';
+
+/** Stable backend error codes returned by Uniport */
+export type UniportErrorCode =
+    | 'VALIDATION_ERROR'
+    | 'QUOTE_FAILED'
+    | 'DEPOSIT_SUBMISSION_FAILED'
+    | 'STATUS_CHECK_FAILED'
+    | 'INTERNAL_ERROR'
+    | 'REQUEST_TIMEOUT'
+    | 'NETWORK_ERROR'
+    | 'UNKNOWN_ERROR';
+
+export interface UniportApiErrorBody {
+    code?: UniportErrorCode;
+    message?: string;
+    details?: unknown;
+}
+
+export class UniportError extends Error {
+    code: UniportErrorCode;
+    details?: unknown;
+    status?: number;
+
+    constructor(params: {
+        code: UniportErrorCode;
+        message: string;
+        details?: unknown;
+        status?: number;
+    }) {
+        super(params.message);
+        this.name = 'UniportError';
+        this.code = params.code;
+        this.details = params.details;
+        this.status = params.status;
+    }
+}
 
 /** Quote request options */
 export interface QuoteOptions {
@@ -41,6 +77,85 @@ export interface QuoteOptions {
     dry?: boolean;
     /** Referral identifier for tracking */
     referral?: string;
+    /** Abort signal for cancellation */
+    signal?: AbortSignal;
+}
+
+function isAbortError(error: unknown): boolean {
+    return error instanceof Error && error.name === 'AbortError';
+}
+
+function extractDetailMessage(details: unknown): string | undefined {
+    if (typeof details === 'string' && details.trim()) {
+        return details;
+    }
+
+    if (Array.isArray(details)) {
+        const firstString = details.find(
+            (detail): detail is string =>
+                typeof detail === 'string' && detail.trim().length > 0
+        );
+        return firstString;
+    }
+
+    if (
+        typeof details === 'object' &&
+        details !== null &&
+        'message' in details &&
+        typeof (details as { message?: unknown }).message === 'string'
+    ) {
+        const message = (details as { message: string }).message.trim();
+        return message || undefined;
+    }
+
+    return undefined;
+}
+
+function toUniportError(
+    body: UniportApiErrorBody,
+    fallback: {
+        code: UniportErrorCode;
+        message: string;
+        status: number;
+    }
+): UniportError {
+    const detailMessage = extractDetailMessage(body.details);
+    return new UniportError({
+        code: body.code || fallback.code,
+        message: detailMessage || body.message || fallback.message,
+        details: body.details,
+        status: fallback.status,
+    });
+}
+
+function createTimeoutSignal(
+    timeoutMs: number,
+    externalSignal?: AbortSignal
+): {
+    cleanup: () => void;
+    didTimeout: () => boolean;
+    signal: AbortSignal;
+} {
+    const controller = new AbortController();
+    let timedOut = false;
+    const timeoutId = setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+    }, timeoutMs);
+
+    const abortFromExternal = () => controller.abort();
+    externalSignal?.addEventListener('abort', abortFromExternal, {
+        once: true,
+    });
+
+    return {
+        signal: controller.signal,
+        didTimeout: () => timedOut,
+        cleanup: () => {
+            clearTimeout(timeoutId);
+            externalSignal?.removeEventListener('abort', abortFromExternal);
+        },
+    };
 }
 
 /** Quote result with deposit info */
@@ -141,32 +256,62 @@ export async function getQuote(options: QuoteOptions): Promise<QuoteResult> {
         deadline,
         dry = false,
         referral = 'uniport',
+        signal,
     } = options;
 
     const amountInSmallestUnits = toSmallestUnits(amount, originToken.decimals);
 
-    const response = await fetch(`${BACKEND_URL}/api/quote`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            dry,
-            swapType,
-            slippageTolerance,
-            originAsset: originToken.assetId,
-            destinationAsset: destinationToken.assetId,
-            amount: amountInSmallestUnits,
-            refundTo,
-            recipient,
-            deadline: deadline?.toISOString() || generateDeadline(1),
-            referral,
-        }),
-    });
+    const { backendUrl, requestTimeoutMs } = getUniportConfig();
+    const { signal: requestSignal, cleanup, didTimeout } = createTimeoutSignal(
+        requestTimeoutMs,
+        signal
+    );
+
+    let response: Response;
+
+    try {
+        response = await fetch(`${backendUrl}/api/quote`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: requestSignal,
+            body: JSON.stringify({
+                dry,
+                swapType,
+                slippageTolerance,
+                originAsset: originToken.assetId,
+                destinationAsset: destinationToken.assetId,
+                amount: amountInSmallestUnits,
+                refundTo,
+                recipient,
+                deadline: deadline?.toISOString() || generateDeadline(1),
+                referral,
+            }),
+        });
+    } catch (error) {
+        cleanup();
+        if (isAbortError(error)) {
+            if (signal?.aborted && !didTimeout()) {
+                throw error;
+            }
+            throw new UniportError({
+                code: 'REQUEST_TIMEOUT',
+                message: 'Quote request timed out',
+            });
+        }
+        throw error;
+    }
+
+    cleanup();
 
     if (!response.ok) {
-        const errorBody = await response.json().catch(() => ({}));
-        throw new Error(
-            `Quote failed (${response.status}): ${JSON.stringify(errorBody)}`
-        );
+        const errorBody = await response
+            .json()
+            .catch(() => ({})) as UniportApiErrorBody;
+        throw toUniportError(errorBody, {
+            code: 'QUOTE_FAILED',
+            message: 'Quote failed.',
+            status: response.status,
+        });
     }
 
     const data = await response.json();
@@ -194,17 +339,40 @@ export async function submitDepositTx(params: {
     memo?: string;
     nearSenderAccount?: string;
 }): Promise<void> {
-    const response = await fetch(`${BACKEND_URL}/api/deposit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-    });
+    const { backendUrl, requestTimeoutMs } = getUniportConfig();
+    const { signal, cleanup } = createTimeoutSignal(requestTimeoutMs);
+
+    let response: Response;
+
+    try {
+        response = await fetch(`${backendUrl}/api/deposit`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal,
+            body: JSON.stringify(params),
+        });
+    } catch (error) {
+        cleanup();
+        if (isAbortError(error)) {
+            throw new UniportError({
+                code: 'REQUEST_TIMEOUT',
+                message: 'Deposit submission timed out',
+            });
+        }
+        throw error;
+    }
+
+    cleanup();
 
     if (!response.ok) {
-        const errorBody = await response.json().catch(() => ({}));
-        throw new Error(
-            `Submit deposit failed (${response.status}): ${JSON.stringify(errorBody)}`
-        );
+        const errorBody = await response
+            .json()
+            .catch(() => ({})) as UniportApiErrorBody;
+        throw toUniportError(errorBody, {
+            code: 'DEPOSIT_SUBMISSION_FAILED',
+            message: 'Submit deposit failed.',
+            status: response.status,
+        });
     }
 }
 
@@ -215,18 +383,42 @@ export async function getExecutionStatus(
     depositAddress: string,
     memo?: string
 ): Promise<StatusResult> {
-    const url = new URL(`${BACKEND_URL}/api/status/${encodeURIComponent(depositAddress)}`);
+    const { backendUrl, requestTimeoutMs } = getUniportConfig();
+    const url = new URL(
+        `${backendUrl}/api/status/${encodeURIComponent(depositAddress)}`
+    );
     if (memo) {
         url.searchParams.set('memo', memo);
     }
 
-    const response = await fetch(url.toString());
+    const { signal, cleanup } = createTimeoutSignal(requestTimeoutMs);
+
+    let response: Response;
+
+    try {
+        response = await fetch(url.toString(), { signal });
+    } catch (error) {
+        cleanup();
+        if (isAbortError(error)) {
+            throw new UniportError({
+                code: 'REQUEST_TIMEOUT',
+                message: 'Status check timed out',
+            });
+        }
+        throw error;
+    }
+
+    cleanup();
 
     if (!response.ok) {
-        const errorBody = await response.json().catch(() => ({}));
-        throw new Error(
-            `Status check failed (${response.status}): ${JSON.stringify(errorBody)}`
-        );
+        const errorBody = await response
+            .json()
+            .catch(() => ({})) as UniportApiErrorBody;
+        throw toUniportError(errorBody, {
+            code: 'STATUS_CHECK_FAILED',
+            message: 'Status check failed.',
+            status: response.status,
+        });
     }
 
     return await response.json();

@@ -5,11 +5,11 @@
  *
  * @example
  * ```tsx
- * import { UniportButton } from 'uniport'
+ * import { UniportButton } from 'uniport-sdk'
  *
  * <UniportButton
  *   recipient="0x..."
- *   destinationToken="suiUSDC"
+ *   destinationToken="arbitrumUSDC"
  *   onSuccess={(result) => console.log('Paid!', result)}
  * />
  * ```
@@ -19,65 +19,115 @@ import React, { useState } from 'react';
 import { UniportModal } from './UniportModal';
 import type { UniportButtonProps } from '../types';
 
-const buttonStyles = {
-    default: {
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '8px',
-        padding: '12px 24px',
-        fontSize: '14px',
-        fontWeight: 500,
-        color: 'white',
-        background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)',
-        border: 'none',
-        borderRadius: '12px',
-        cursor: 'pointer',
-        transition: 'all 0.2s ease',
-        boxShadow: '0 4px 14px rgba(79, 70, 229, 0.3)',
-        fontFamily:
-            "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-    } as React.CSSProperties,
-    compact: {
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '6px',
-        padding: '8px 16px',
-        fontSize: '13px',
-        fontWeight: 500,
-        color: 'white',
-        background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)',
-        border: 'none',
-        borderRadius: '8px',
-        cursor: 'pointer',
-        transition: 'all 0.2s ease',
-        boxShadow: '0 2px 8px rgba(79, 70, 229, 0.25)',
-        fontFamily:
-            "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-    } as React.CSSProperties,
-    outline: {
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '8px',
-        padding: '12px 24px',
-        fontSize: '14px',
-        fontWeight: 500,
-        color: '#4F46E5',
-        background: 'transparent',
-        border: '2px solid #4F46E5',
-        borderRadius: '12px',
-        cursor: 'pointer',
-        transition: 'all 0.2s ease',
-        fontFamily:
-            "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-    } as React.CSSProperties,
-    disabled: {
-        opacity: 0.5,
-        cursor: 'not-allowed',
-    } as React.CSSProperties,
+type ButtonVariant = NonNullable<UniportButtonProps['variant']>;
+type ButtonTheme = NonNullable<UniportButtonProps['theme']>;
+
+const sharedButtonStyle: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    fontFamily:
+        "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
 };
+
+const buttonStyles: Record<
+    ButtonTheme,
+    Record<ButtonVariant, React.CSSProperties>
+> = {
+    light: {
+        default: {
+            ...sharedButtonStyle,
+            gap: '8px',
+            padding: '12px 24px',
+            fontSize: '14px',
+            fontWeight: 600,
+            color: '#ffffff',
+            background: '#1c1c1e',
+            border: '1px solid #1c1c1e',
+            borderRadius: '12px',
+            boxShadow: '0 8px 24px rgba(28, 28, 30, 0.18)',
+        },
+        compact: {
+            ...sharedButtonStyle,
+            gap: '6px',
+            padding: '8px 16px',
+            fontSize: '13px',
+            fontWeight: 600,
+            color: '#ffffff',
+            background: '#1c1c1e',
+            border: '1px solid #1c1c1e',
+            borderRadius: '8px',
+            boxShadow: '0 6px 18px rgba(28, 28, 30, 0.16)',
+        },
+        outline: {
+            ...sharedButtonStyle,
+            gap: '8px',
+            padding: '12px 24px',
+            fontSize: '14px',
+            fontWeight: 600,
+            color: '#1c1c1e',
+            background: 'transparent',
+            border: '1px solid #1c1c1e',
+            borderRadius: '12px',
+        },
+    },
+    dark: {
+        default: {
+            ...sharedButtonStyle,
+            gap: '8px',
+            padding: '12px 24px',
+            fontSize: '14px',
+            fontWeight: 600,
+            color: '#111113',
+            background: '#ffffff',
+            border: '1px solid rgba(255, 255, 255, 0.9)',
+            borderRadius: '12px',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.32)',
+        },
+        compact: {
+            ...sharedButtonStyle,
+            gap: '6px',
+            padding: '8px 16px',
+            fontSize: '13px',
+            fontWeight: 600,
+            color: '#111113',
+            background: '#ffffff',
+            border: '1px solid rgba(255, 255, 255, 0.9)',
+            borderRadius: '8px',
+            boxShadow: '0 6px 18px rgba(0, 0, 0, 0.28)',
+        },
+        outline: {
+            ...sharedButtonStyle,
+            gap: '8px',
+            padding: '12px 24px',
+            fontSize: '14px',
+            fontWeight: 600,
+            color: '#ffffff',
+            background: 'transparent',
+            border: '1px solid rgba(255, 255, 255, 0.72)',
+            borderRadius: '12px',
+        },
+    },
+};
+
+const disabledButtonStyle: React.CSSProperties = {
+    opacity: 0.5,
+    cursor: 'not-allowed',
+    boxShadow: 'none',
+};
+
+function getButtonStyle(
+    variant: ButtonVariant,
+    theme: ButtonTheme,
+    disabled: boolean
+): React.CSSProperties {
+    return {
+        ...buttonStyles[theme][variant],
+        ...(disabled ? disabledButtonStyle : {}),
+    };
+}
 
 export function UniportButton({
     recipient,
@@ -88,6 +138,7 @@ export function UniportButton({
     variant = 'default',
     disabled = false,
     className,
+    theme = 'light',
     onSuccess,
     onError,
     onOpenChange,
@@ -106,10 +157,7 @@ export function UniportButton({
         onOpenChange?.(false);
     };
 
-    const style = {
-        ...buttonStyles[variant],
-        ...(disabled ? buttonStyles.disabled : {}),
-    };
+    const style = getButtonStyle(variant, theme, disabled);
 
     return (
         <>
@@ -131,6 +179,7 @@ export function UniportButton({
                 refundAddress={refundAddress}
                 destinationToken={destinationToken}
                 amount={amount}
+                theme={theme}
                 onSuccess={onSuccess}
                 onError={onError}
             />

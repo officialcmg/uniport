@@ -1,288 +1,102 @@
 /**
  * UniportModal Component
- *
- * Premium payment modal with chain/token selection and QR code display
- * Based on Aura.build design with glassmorphism and animations
  */
 
 import React, { useEffect, useCallback, useState } from 'react';
+import ReactDOM from 'react-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { useUniportPayment } from '../hooks/useUniportPayment';
 import type { UniportModalProps } from '../types';
 
 // ============================================================================
-// STYLES
+// THEME SYSTEM
 // ============================================================================
 
-const styles = {
-    overlay: {
-        position: 'fixed' as const,
-        inset: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        backdropFilter: 'blur(8px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 9999,
-        padding: '16px',
-        animation: 'uniport-fade-in 0.2s ease',
-    },
-    modal: {
-        position: 'relative' as const,
-        width: '100%',
-        maxWidth: '380px',
-        background: 'rgba(22, 22, 30, 0.95)',
-        backdropFilter: 'blur(24px)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        borderRadius: '24px',
-        padding: '24px',
-        boxShadow:
-            '0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.05)',
-        fontFamily:
-            "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        animation: 'uniport-slide-up 0.3s ease',
-    },
-    header: {
-        display: 'flex',
-        flexDirection: 'column' as const,
-        alignItems: 'center',
-        marginBottom: '24px',
-    },
-    headerIcon: {
-        width: '48px',
-        height: '48px',
-        borderRadius: '16px',
-        background: 'linear-gradient(135deg, rgba(255,255,255,0.1), transparent)',
-        border: '1px solid rgba(255,255,255,0.05)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: '16px',
-    },
-    title: {
-        fontSize: '18px',
-        fontWeight: 500,
-        color: 'white',
-        margin: 0,
-        textShadow: '0 0 15px rgba(255,255,255,0.3)',
-    },
-    subtitle: {
-        fontSize: '12px',
-        color: 'rgba(255,255,255,0.4)',
-        marginTop: '4px',
-        fontWeight: 300,
-        letterSpacing: '0.5px',
-    },
-    closeButton: {
-        position: 'absolute' as const,
-        top: '16px',
-        right: '16px',
-        width: '32px',
-        height: '32px',
-        borderRadius: '8px',
-        background: 'rgba(255,255,255,0.05)',
-        border: '1px solid rgba(255,255,255,0.1)',
-        color: 'rgba(255,255,255,0.6)',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        transition: 'all 0.2s',
-    },
-    selectorsRow: {
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '12px',
-        marginBottom: '24px',
-    },
-    selector: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '12px',
-        background: 'rgba(255,255,255,0.05)',
-        border: '1px solid rgba(255,255,255,0.05)',
-        borderRadius: '16px',
-        cursor: 'pointer',
-        transition: 'all 0.2s',
-    },
-    selectorIcon: {
-        width: '32px',
-        height: '32px',
-        borderRadius: '50%',
-        background: '#1c1c26',
-        border: '1px solid rgba(255,255,255,0.1)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        overflow: 'hidden',
-    },
-    selectorLabel: {
-        fontSize: '10px',
-        textTransform: 'uppercase' as const,
-        letterSpacing: '1.5px',
-        color: 'rgba(255,255,255,0.3)',
-        fontWeight: 500,
-    },
-    selectorValue: {
-        fontSize: '14px',
-        color: 'rgba(255,255,255,0.9)',
-        fontWeight: 500,
-    },
-    amountInput: {
-        width: '100%',
-        textAlign: 'center' as const,
-        fontSize: '48px',
-        fontWeight: 500,
-        color: 'white',
-        background: 'transparent',
-        border: 'none',
-        outline: 'none',
-        marginBottom: '24px',
-        caretColor: '#4F46E5',
-    },
-    details: {
-        marginBottom: '20px',
-        padding: '0 4px',
-    },
-    detailRow: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        fontSize: '12px',
-        color: 'rgba(255,255,255,0.4)',
-        marginBottom: '8px',
-    },
-    detailValue: {
-        fontWeight: 500,
-        color: 'rgba(255,255,255,0.7)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-    },
-    button: {
-        width: '100%',
-        position: 'relative' as const,
-        overflow: 'hidden',
-        borderRadius: '16px',
-        padding: '2px',
-        background: 'linear-gradient(90deg, #4F46E5, #7C3AED, #4F46E5)',
-        backgroundSize: '200% 200%',
-        animation: 'uniport-gradient 3s ease infinite',
-        border: 'none',
-        cursor: 'pointer',
-    },
-    buttonInner: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '8px',
-        height: '48px',
-        borderRadius: '14px',
-        background: '#0A0A0F',
-        color: 'white',
-        fontSize: '14px',
-        fontWeight: 500,
-        transition: 'background 0.3s',
-    },
-    buttonDisabled: {
-        opacity: 0.5,
-        cursor: 'not-allowed',
-    },
-    // QR container - dark background, no white box
-    qrContainer: {
-        display: 'flex',
-        flexDirection: 'column' as const,
-        alignItems: 'center',
-        padding: '24px',
-        background: 'transparent',
-        marginBottom: '16px',
-    },
-    // Address with copy button
-    addressContainer: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '8px',
-        marginTop: '16px',
-    },
-    addressText: {
-        fontSize: '12px',
-        color: 'rgba(255,255,255,0.6)',
-        wordBreak: 'break-all' as const,
-        textAlign: 'center' as const,
-        fontFamily: 'monospace',
-    },
-    copyButton: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: '32px',
-        height: '32px',
-        borderRadius: '8px',
-        background: 'rgba(255,255,255,0.1)',
-        border: '1px solid rgba(255,255,255,0.15)',
-        cursor: 'pointer',
-        transition: 'all 0.2s',
-        flexShrink: 0,
-    },
-    statusBadge: {
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '6px',
-        padding: '6px 12px',
-        borderRadius: '20px',
-        fontSize: '12px',
-        fontWeight: 500,
-    },
-    successBadge: {
-        background: 'rgba(16, 185, 129, 0.2)',
-        color: '#10B981',
-    },
-    processingBadge: {
-        background: 'rgba(79, 70, 229, 0.2)',
-        color: '#818CF8',
-    },
-    dropdown: {
-        position: 'absolute' as const,
-        top: 'calc(100% + 8px)',
-        left: 0,
-        right: 0,
-        background: 'rgba(22, 22, 30, 0.98)',
-        border: '1px solid rgba(255,255,255,0.1)',
-        borderRadius: '16px',
-        maxHeight: '200px',
-        overflowY: 'auto' as const,
-        zIndex: 10,
-        boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
-    },
-    dropdownItem: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        padding: '12px 16px',
-        cursor: 'pointer',
-        transition: 'background 0.2s',
-    },
-    loadingDot: {
-        width: '8px',
-        height: '8px',
-        borderRadius: '50%',
-        background: '#818CF8',
-        animation: 'uniport-pulse 1s ease infinite',
-    },
-    tokenBadge: {
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '4px',
-        padding: '2px 8px',
-        borderRadius: '12px',
-        background: 'rgba(255,255,255,0.08)',
-        fontSize: '11px',
-    },
+type ThemeMode = 'light' | 'dark';
+
+interface ThemeColors {
+    overlay: string;
+    modalBg: string;
+    rowHover: string;
+    inputBg: string;
+    warningBg: string;
+    warningBorder: string;
+    text: string;
+    textSecondary: string;
+    textMuted: string;
+    border: string;
+    accent: string;
+    success: string;
+    error: string;
+    warning: string;
+    warningText: string;
+    btnBg: string;
+    btnText: string;
+    btnDisabledBg: string;
+    btnDisabledText: string;
+    iconBtnBg: string;
+    iconBtnHover: string;
+    iconBtnColor: string;
+}
+
+const LIGHT: ThemeColors = {
+    overlay: 'rgba(0, 0, 0, 0.42)',
+    modalBg: '#ffffff',
+    rowHover: '#f5f5f7',
+    inputBg: '#f5f5f7',
+    warningBg: '#fffbeb',
+    warningBorder: 'rgba(245, 158, 11, 0.25)',
+    text: '#1c1c1e',
+    textSecondary: '#3a3a3c',
+    textMuted: '#8e8e93',
+    border: '#e5e5ea',
+    accent: '#6366f1',
+    success: '#30d158',
+    error: '#ff3b30',
+    warning: '#d97706',
+    warningText: '#92400e',
+    btnBg: '#1c1c1e',
+    btnText: '#ffffff',
+    btnDisabledBg: '#e5e5ea',
+    btnDisabledText: '#8e8e93',
+    iconBtnBg: '#f5f5f7',
+    iconBtnHover: '#e5e5ea',
+    iconBtnColor: '#3a3a3c',
 };
 
-// CSS Keyframes (injected once)
+const DARK: ThemeColors = {
+    overlay: 'rgba(0, 0, 0, 0.65)',
+    modalBg: '#1c1c1e',
+    rowHover: '#2c2c2e',
+    inputBg: '#2c2c2e',
+    warningBg: 'rgba(245, 158, 11, 0.1)',
+    warningBorder: 'rgba(245, 158, 11, 0.2)',
+    text: '#ffffff',
+    textSecondary: 'rgba(235, 235, 245, 0.85)',
+    textMuted: '#8e8e93',
+    border: '#38383a',
+    accent: '#818cf8',
+    success: '#30d158',
+    error: '#ff453a',
+    warning: '#ffd60a',
+    warningText: '#ffd60a',
+    btnBg: '#6366f1',
+    btnText: '#ffffff',
+    btnDisabledBg: '#3a3a3c',
+    btnDisabledText: '#636366',
+    iconBtnBg: '#2c2c2e',
+    iconBtnHover: '#3a3a3c',
+    iconBtnColor: 'rgba(235, 235, 245, 0.8)',
+};
+
+function getTheme(mode: ThemeMode): ThemeColors {
+    return mode === 'dark' ? DARK : LIGHT;
+}
+
+// ============================================================================
+// CSS INJECTION
+// ============================================================================
+
 const injectStyles = () => {
     if (typeof document === 'undefined') return;
     if (document.getElementById('uniport-styles')) return;
@@ -292,28 +106,200 @@ const injectStyles = () => {
     style.textContent = `
         @keyframes uniport-fade-in {
             from { opacity: 0; }
-            to { opacity: 1; }
+            to   { opacity: 1; }
         }
         @keyframes uniport-slide-up {
-            from { opacity: 0; transform: translateY(20px) scale(0.95); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
+            from { opacity: 0; transform: translateY(14px) scale(0.98); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
         }
-        @keyframes uniport-gradient {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+        @keyframes uniport-spin {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
         }
         @keyframes uniport-pulse {
             0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
+            50%       { opacity: 0.35; }
         }
     `;
     document.head.appendChild(style);
 };
 
 // ============================================================================
-// COMPONENT
+// ICON WITH FALLBACK
 // ============================================================================
+
+const AVATAR_COLORS = [
+    '#6366f1', '#8b5cf6', '#06b6d4', '#10b981',
+    '#f59e0b', '#ef4444', '#ec4899', '#3b82f6',
+    '#14b8a6', '#f97316',
+];
+
+function charColor(name: string): string {
+    let h = 0;
+    for (let i = 0; i < name.length; i++) {
+        h = name.charCodeAt(i) + ((h << 5) - h);
+    }
+    return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+}
+
+function TokenAvatar({ src, name, size = 40 }: { src: string; name: string; size?: number }) {
+    const [failed, setFailed] = useState(false);
+
+    if (failed || !src) {
+        return (
+            <div
+                aria-label={name}
+                style={{
+                    width: size, height: size, borderRadius: '50%',
+                    background: charColor(name),
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: Math.round(size * 0.40), fontWeight: 700, color: '#fff',
+                    flexShrink: 0, userSelect: 'none', letterSpacing: '-0.01em',
+                }}
+            >
+                {name.charAt(0).toUpperCase()}
+            </div>
+        );
+    }
+
+    return (
+        <img
+            src={src} alt={name} width={size} height={size}
+            style={{ borderRadius: '50%', objectFit: 'cover', flexShrink: 0, display: 'block' }}
+            onError={() => setFailed(true)}
+        />
+    );
+}
+
+// ============================================================================
+// SVG ICONS
+// ============================================================================
+
+function BackArrow({ color }: { color: string }) {
+    return (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M19 12H5M5 12l7 7M5 12l7-7" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+function XMark({ color }: { color: string }) {
+    return (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+            <path d="M18 6L6 18M6 6l12 12" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
+        </svg>
+    );
+}
+
+function ChevronRight({ color }: { color: string }) {
+    return (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M9 18l6-6-6-6" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+function Spinner({ color }: { color: string }) {
+    return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+            style={{ animation: 'uniport-spin 0.75s linear infinite', display: 'block', flexShrink: 0 }}>
+            <circle cx="12" cy="12" r="10" stroke={color} strokeWidth="3" strokeOpacity="0.2" />
+            <path d="M12 2a10 10 0 019.95 9" stroke={color} strokeWidth="3" strokeLinecap="round" />
+        </svg>
+    );
+}
+
+function CopyIcon({ color }: { color: string }) {
+    return (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <rect x="9" y="9" width="13" height="13" rx="2" stroke={color} strokeWidth="2" />
+            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke={color} strokeWidth="2" />
+        </svg>
+    );
+}
+
+function CheckMark({ color }: { color: string }) {
+    return (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M20 6L9 17l-5-5" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+function WarningTriangle({ color }: { color: string }) {
+    return (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginTop: 1 }}>
+            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <line x1="12" y1="9" x2="12" y2="13" stroke={color} strokeWidth="2" strokeLinecap="round" />
+            <line x1="12" y1="17" x2="12.01" y2="17" stroke={color} strokeWidth="2" strokeLinecap="round" />
+        </svg>
+    );
+}
+
+function formatPreviewError(error: Error): string {
+    if (error.name === 'AbortError') {
+        return 'Estimate request was cancelled. Try again.';
+    }
+
+    if (error.message === 'Quote request timed out') {
+        return 'Could not fetch estimate. Please try again.';
+    }
+
+    const normalized = error.message.toLowerCase();
+
+    if (normalized.includes('recipient is not valid')) {
+        return 'Recipient address does not match the selected destination chain.';
+    }
+
+    if (normalized.includes('refund') && normalized.includes('valid')) {
+        return 'Refund address does not match the source chain.';
+    }
+
+    if (normalized.includes('amount')) {
+        return 'Enter a valid amount to fetch an estimate.';
+    }
+
+    return 'Could not fetch estimate. Check the details and try again.';
+}
+
+function formatChainLabel(chainId: string): string {
+    const labels: Record<string, string> = {
+        sui: 'Sui',
+        eth: 'Ethereum',
+        sol: 'Solana',
+        arb: 'Arbitrum',
+        base: 'Base',
+        op: 'Optimism',
+        pol: 'Polygon',
+        avax: 'Avalanche',
+        bsc: 'BNB Chain',
+        near: 'NEAR',
+        btc: 'Bitcoin',
+        ton: 'TON',
+        tron: 'Tron',
+        stellar: 'Stellar',
+        cardano: 'Cardano',
+        xrp: 'XRP Ledger',
+        doge: 'Dogecoin',
+        ltc: 'Litecoin',
+        bch: 'Bitcoin Cash',
+        aptos: 'Aptos',
+        starknet: 'Starknet',
+        bera: 'Berachain',
+        zec: 'Zcash',
+        gnosis: 'Gnosis',
+        monad: 'Monad',
+    };
+
+    return labels[chainId] || chainId.toUpperCase();
+}
+
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
+type ModalStep = 'chain' | 'token' | 'amount';
 
 export function UniportModal({
     open,
@@ -322,689 +308,644 @@ export function UniportModal({
     refundAddress,
     destinationToken,
     amount: initialAmount,
+    theme: themeMode = 'light',
     onSuccess,
     onError,
 }: UniportModalProps) {
+    const t = getTheme(themeMode);
+
     const payment = useUniportPayment({
-        recipient,
-        refundAddress,
-        destinationToken,
-        amount: initialAmount,
-        onSuccess,
-        onError,
+        recipient, refundAddress, destinationToken,
+        amount: initialAmount, onSuccess, onError,
     });
 
-    const [chainDropdownOpen, setChainDropdownOpen] = React.useState(false);
-    const [tokenDropdownOpen, setTokenDropdownOpen] = React.useState(false);
+    const [modalStep, setModalStep] = useState<ModalStep>('chain');
     const [copied, setCopied] = useState(false);
     const [showReceipt, setShowReceipt] = useState(false);
 
-    // Inject styles on mount
+    // Portal target — resolved once on mount, never changes
+    const [portalRoot, setPortalRoot] = useState<Element | null>(null);
     useEffect(() => {
+        setPortalRoot(document.body);
         injectStyles();
     }, []);
 
-    // Start polling when awaiting deposit
     useEffect(() => {
-        if (payment.paymentState === 'awaiting_deposit') {
-            payment.startPolling();
-        }
+        if (payment.paymentState === 'awaiting_deposit') payment.startPolling();
     }, [payment.paymentState]);
 
-    // Stop polling on unmount only
-    useEffect(() => {
-        return () => payment.stopPolling();
-    }, []);
+    useEffect(() => { return () => payment.stopPolling(); }, []);
 
-    // Reset on close
     const handleClose = useCallback(() => {
         payment.reset();
+        setModalStep('chain');
+        setShowReceipt(false);
         onClose();
     }, [payment, onClose]);
 
-    // Handle escape key
     useEffect(() => {
-        const handleEscape = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') handleClose();
-        };
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') handleClose(); };
         if (open) {
-            document.addEventListener('keydown', handleEscape);
-            return () => document.removeEventListener('keydown', handleEscape);
+            document.addEventListener('keydown', onKey);
+            // Prevent body scroll while modal is open
+            document.body.style.overflow = 'hidden';
+            return () => {
+                document.removeEventListener('keydown', onKey);
+                document.body.style.overflow = '';
+            };
         }
     }, [open, handleClose]);
 
-    // Copy address handler
     const handleCopy = useCallback(async () => {
         if (payment.quote?.depositAddress) {
-            const success = await payment.copyToClipboard(payment.quote.depositAddress);
-            if (success) {
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
-            }
+            const ok = await payment.copyToClipboard(payment.quote.depositAddress);
+            if (ok) { setCopied(true); setTimeout(() => setCopied(false), 2000); }
         }
     }, [payment]);
 
-    if (!open) return null;
+    if (!open || !portalRoot) return null;
 
-    const canSubmit =
-        payment.selectedToken && payment.amount && refundAddress;
-    const isProcessing =
-        payment.paymentState === 'quoting' ||
-        payment.paymentState === 'processing';
-    const showQR = payment.paymentState === 'awaiting_deposit' || payment.paymentState === 'processing';
-    const isSuccess = payment.paymentState === 'success';
+    // Derived state
+    const { paymentState } = payment;
+    const showQR    = paymentState === 'awaiting_deposit' || paymentState === 'processing';
+    const isSuccess = paymentState === 'success';
+    const isError   = paymentState === 'error';
+    const isQuoting = paymentState === 'quoting';
+    const canSubmit = !!(
+        payment.selectedToken &&
+        payment.amount &&
+        payment.refundAddress.trim()
+    );
+    const canPreviewEstimate = !!(
+        payment.selectedToken &&
+        payment.amount &&
+        payment.refundAddress.trim()
+    );
+    const showBack  = !isSuccess && !isError && (showQR || modalStep !== 'chain');
 
-    return (
-        <div style={styles.overlay} onClick={handleClose}>
-            <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-                {/* Close Button */}
-                <button
-                    style={styles.closeButton}
-                    onClick={handleClose}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.background =
-                            'rgba(255,255,255,0.1)';
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.background =
-                            'rgba(255,255,255,0.05)';
-                    }}
-                >
-                    <CloseIcon />
-                </button>
+    // ── Shared style factories (depend on `t`, called during render) ──────────
 
-                {/* Success State - Full Daimo-style */}
-                {isSuccess ? (
-                    <div style={{ textAlign: 'center', paddingTop: '20px' }}>
-                        <h2 style={{ ...styles.title, marginBottom: '32px', fontSize: '20px' }}>
-                            Payment Successful
-                        </h2>
+    const iconBtn: React.CSSProperties = {
+        width: 36, height: 36, borderRadius: '50%',
+        background: t.iconBtnBg, border: 'none', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        transition: 'background 0.15s', flexShrink: 0, padding: 0,
+    };
 
-                        {/* Large Checkmark Circle */}
-                        <div
+    const primaryBtn = (disabled: boolean): React.CSSProperties => ({
+        width: '100%', height: 52, borderRadius: '14px', border: 'none',
+        background: disabled ? t.btnDisabledBg : t.btnBg,
+        color: disabled ? t.btnDisabledText : t.btnText,
+        fontSize: '15px', fontWeight: 600,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+        fontFamily: 'inherit', letterSpacing: '-0.01em',
+    });
+
+    const warningBox: React.CSSProperties = {
+        display: 'flex', gap: '9px', alignItems: 'flex-start',
+        padding: '11px 13px',
+        background: t.warningBg,
+        border: `1px solid ${t.warningBorder}`,
+        borderRadius: '10px',
+    };
+
+    // ── Header ────────────────────────────────────────────────────────────────
+
+    const renderHeader = (title: string) => (
+        <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '18px 18px 0', marginBottom: '12px',
+        }}>
+            <div style={{ width: 36, display: 'flex' }}>
+                {showBack && (
+                    <button style={iconBtn}
+                        onClick={() => {
+                            if (showQR) { payment.cancelQuote(); setModalStep('amount'); }
+                            else if (modalStep === 'token') setModalStep('chain');
+                            else if (modalStep === 'amount') setModalStep('token');
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = t.iconBtnHover; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = t.iconBtnBg; }}
+                    >
+                        <BackArrow color={t.iconBtnColor} />
+                    </button>
+                )}
+            </div>
+            <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: t.text, letterSpacing: '-0.015em' }}>
+                {title}
+            </h2>
+            <button style={iconBtn} onClick={handleClose}
+                onMouseEnter={e => { e.currentTarget.style.background = t.iconBtnHover; }}
+                onMouseLeave={e => { e.currentTarget.style.background = t.iconBtnBg; }}
+            >
+                <XMark color={t.iconBtnColor} />
+            </button>
+        </div>
+    );
+
+    // ── Chain step ────────────────────────────────────────────────────────────
+
+    const renderChainStep = () => (
+        <>
+            {renderHeader('Select network')}
+            <div style={{ overflowY: 'auto', maxHeight: 420 }}>
+                {payment.chains.map((chain, i) => (
+                    <button key={chain.id}
+                        onClick={() => { payment.setSelectedChain(chain); setModalStep('token'); }}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '14px',
+                            width: '100%', padding: '13px 20px',
+                            background: 'transparent', border: 'none',
+                            borderBottom: i < payment.chains.length - 1 ? `1px solid ${t.border}` : 'none',
+                            cursor: 'pointer', textAlign: 'left',
+                            transition: 'background 0.1s', fontFamily: 'inherit',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = t.rowHover; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                    >
+                        <TokenAvatar src={chain.icon} name={chain.name} size={40} />
+                        <span style={{ flex: 1, fontSize: '15px', fontWeight: 500, color: t.text }}>
+                            {chain.name}
+                        </span>
+                        <ChevronRight color={t.textMuted} />
+                    </button>
+                ))}
+            </div>
+        </>
+    );
+
+    // ── Token step ────────────────────────────────────────────────────────────
+
+    const renderTokenStep = () => (
+        <>
+            {renderHeader('Select token')}
+            <div style={{ overflowY: 'auto', maxHeight: 420 }}>
+                {payment.tokens.map((token, i) => (
+                    <button key={token.assetId}
+                        onClick={() => { payment.setSelectedToken(token); setModalStep('amount'); }}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '14px',
+                            width: '100%', padding: '13px 20px',
+                            background: 'transparent', border: 'none',
+                            borderBottom: i < payment.tokens.length - 1 ? `1px solid ${t.border}` : 'none',
+                            cursor: 'pointer', textAlign: 'left',
+                            transition: 'background 0.1s', fontFamily: 'inherit',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = t.rowHover; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                    >
+                        <TokenAvatar src={token.icon} name={token.symbol} size={40} />
+                        <span style={{ flex: 1, fontSize: '15px', fontWeight: 500, color: t.text }}>
+                            {token.symbol}
+                        </span>
+                        <span style={{ fontSize: '13px', color: t.textMuted, fontWeight: 500 }}>
+                            {payment.selectedChain?.name}
+                        </span>
+                    </button>
+                ))}
+            </div>
+        </>
+    );
+
+    // ── Amount step ───────────────────────────────────────────────────────────
+
+    const renderAmountStep = () => {
+        const tok = payment.selectedToken;
+        const ch  = payment.selectedChain;
+        return (
+            <>
+                {renderHeader('Enter amount')}
+                <div style={{ padding: '4px 20px 24px' }}>
+                    {/* Context chip */}
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: '10px',
+                        padding: '10px 13px', background: t.inputBg,
+                        borderRadius: '12px', marginBottom: '24px',
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                            {tok && <TokenAvatar src={tok.icon} name={tok.symbol} size={30} />}
+                            <div style={{ marginLeft: -8, marginTop: 12 }}>
+                                <TokenAvatar src={payment.destinationToken.icon} name={payment.destinationToken.symbol} size={20} />
+                            </div>
+                        </div>
+                        <div>
+                            <div style={{ fontSize: '13px', fontWeight: 600, color: t.text }}>
+                                {tok?.symbol} on {ch?.name}
+                            </div>
+                            <div style={{ fontSize: '12px', color: t.textMuted, marginTop: 1 }}>
+                                → {payment.destinationToken.symbol} on {payment.destinationToken.chain.toUpperCase()}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Big amount input */}
+                    <div style={{ textAlign: 'center', marginBottom: '6px' }}>
+                        <input
+                            type="text" inputMode="decimal" placeholder="0.00"
+                            value={payment.amount}
+                            onChange={e => payment.setAmount(e.target.value)}
                             style={{
-                                width: '100px',
-                                height: '100px',
-                                borderRadius: '50%',
-                                background: 'rgba(22, 22, 30, 0.9)',
-                                border: '3px solid #10B981',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                margin: '0 auto 24px',
-                                boxShadow: '0 0 30px rgba(16, 185, 129, 0.3)',
+                                width: '100%', textAlign: 'center',
+                                fontSize: '54px', fontWeight: 600,
+                                color: payment.amount ? t.text : t.textMuted,
+                                background: 'transparent', border: 'none', outline: 'none',
+                                caretColor: t.accent, fontFamily: 'inherit',
+                                letterSpacing: '-0.04em', lineHeight: 1, padding: 0,
+                            }}
+                            autoFocus
+                        />
+                        <div style={{ fontSize: '14px', color: t.textMuted, marginTop: 8 }}>
+                            {tok?.symbol}
+                        </div>
+                    </div>
+
+                    <div style={{ marginBottom: '18px' }}>
+                        <label
+                            style={{
+                                display: 'block',
+                                fontSize: '13px',
+                                fontWeight: 600,
+                                color: t.text,
+                                marginBottom: '8px',
                             }}
                         >
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                                <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                        </div>
-
-                        <p style={{ color: 'white', fontSize: '18px', fontWeight: 500, marginBottom: '8px' }}>
-                            Payment Completed
-                        </p>
-                        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px', marginBottom: '32px' }}>
-                            {payment.amount} {payment.selectedToken?.symbol} → ~{payment.quote?.amountOutFormatted || ''} {payment.destinationToken.symbol}
-                        </p>
-
-                        {/* Show Receipt Link */}
-                        <button
-                            onClick={() => setShowReceipt(!showReceipt)}
-                            style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.6)', fontSize: '14px', cursor: 'pointer', textDecoration: 'underline', marginBottom: showReceipt ? '16px' : '0' }}
+                            Refund address on {ch?.name || 'the source chain'}
+                        </label>
+                        <input
+                            type="text"
+                            value={payment.refundAddress}
+                            onChange={(e) => payment.setRefundAddress(e.target.value)}
+                            placeholder={`Enter a ${ch?.name || 'source chain'} refund address`}
+                            spellCheck={false}
+                            autoCapitalize="off"
+                            autoCorrect="off"
+                            style={{
+                                width: '100%',
+                                padding: '13px 14px',
+                                fontSize: '14px',
+                                color: payment.refundAddress ? t.text : t.textMuted,
+                                background: t.inputBg,
+                                border: `1px solid ${t.border}`,
+                                borderRadius: '12px',
+                                outline: 'none',
+                                fontFamily: 'inherit',
+                            }}
+                        />
+                        <p
+                            style={{
+                                margin: '8px 0 0',
+                                fontSize: '12px',
+                                color: t.textMuted,
+                                lineHeight: 1.5,
+                            }}
                         >
-                            {showReceipt ? 'Hide receipt' : 'Show receipt'}
-                        </button>
-
-                        {/* Receipt Details */}
-                        {showReceipt && (
-                            <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '16px', textAlign: 'left', marginTop: '8px' }}>
-                                {payment.status?.originTxHashes?.map((hash, i) => (
-                                    <div key={`origin-${i}`} style={{ marginBottom: '12px' }}>
-                                        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', marginBottom: '4px' }}>Source TX ({payment.selectedChain?.name})</p>
-                                        <a href={payment.selectedChain?.id === 'base' ? `https://basescan.org/tx/${hash}` : payment.selectedChain?.id === 'arb' ? `https://arbiscan.io/tx/${hash}` : `https://etherscan.io/tx/${hash}`} target="_blank" rel="noopener noreferrer" style={{ color: '#60A5FA', fontSize: '13px', textDecoration: 'none', fontFamily: 'monospace' }}>
-                                            {hash.slice(0, 10)}...{hash.slice(-8)} ↗
-                                        </a>
-                                    </div>
-                                ))}
-                                {payment.status?.destinationTxHashes?.map((hash, i) => (
-                                    <div key={`dest-${i}`}>
-                                        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', marginBottom: '4px' }}>Destination TX</p>
-                                        <a href={`https://suiscan.xyz/mainnet/tx/${hash}`} target="_blank" rel="noopener noreferrer" style={{ color: '#60A5FA', fontSize: '13px', textDecoration: 'none', fontFamily: 'monospace' }}>
-                                            {hash.slice(0, 10)}...{hash.slice(-8)} ↗
-                                        </a>
-                                    </div>
-                                ))}
-                                {!payment.status?.originTxHashes?.length && !payment.status?.destinationTxHashes?.length && (
-                                    <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '13px' }}>Transaction details loading...</p>
-                                )}
-                            </div>
-                        )}
-
-                        {/* Done Button */}
-                        <button onClick={handleClose} style={{ ...styles.button, marginTop: '24px', background: 'linear-gradient(135deg, #10B981, #059669)' }}>
-                            Done
-                        </button>
+                            Used only if the swap fails. This address must live on the
+                            chain the payer is sending from.
+                        </p>
                     </div>
-                ) : (
-                    <>
-                        {/* Header - only when not success */}
-                        <div style={styles.header}>
-                            <div style={styles.headerIcon}>
-                                <CardIcon />
-                            </div>
-                            <h2 style={styles.title}>
-                                {showQR ? 'Send Payment' : 'Pay with any token'}
-                            </h2>
-                            <p style={styles.subtitle}>
-                                {showQR ? 'Scan QR or copy address below' : 'Secure, gasless transactions'}
+
+                    {/* Live preview */}
+                    <div style={{
+                        textAlign: 'center', height: 32,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        gap: 5, marginBottom: '20px',
+                    }}>
+                        {canPreviewEstimate && payment.isLoadingPreview && (
+                            [0, 0.2, 0.4].map((delay, i) => (
+                                <div key={i} style={{
+                                    width: 6, height: 6, borderRadius: '50%',
+                                    background: t.accent,
+                                    animation: `uniport-pulse 1s ease infinite ${delay}s`,
+                                }} />
+                            ))
+                        )}
+                        {canPreviewEstimate &&
+                            !payment.isLoadingPreview &&
+                            payment.previewQuote && (
+                            <span style={{ fontSize: '15px', color: t.textSecondary }}>
+                                You will receive{' '}
+                                <strong style={{ color: t.text }}>
+                                    {payment.previewQuote.amountOutFormatted}{' '}
+                                    {payment.destinationToken.symbol}
+                                </strong>{' '}
+                                on{' '}
+                                <strong style={{ color: t.text }}>
+                                    {formatChainLabel(payment.destinationToken.chain)}
+                                </strong>
+                            </span>
+                        )}
+                        {canPreviewEstimate &&
+                            !payment.isLoadingPreview &&
+                            payment.previewError && (
+                            <span style={{ fontSize: '13px', color: t.error }}>
+                                {formatPreviewError(payment.previewError)}
+                            </span>
+                        )}
+                        {canPreviewEstimate &&
+                            !payment.isLoadingPreview &&
+                            !payment.previewQuote &&
+                            !payment.previewError && (
+                                <span style={{ fontSize: '13px', color: t.textMuted }}>
+                                    Fetching estimate…
+                                </span>
+                            )}
+                    </div>
+
+                    {/* Exact-amount warning */}
+                    {!!payment.amount && (
+                        <div style={{ ...warningBox, marginBottom: '20px' }}>
+                            <WarningTriangle color={t.warning} />
+                            <p style={{ margin: 0, fontSize: '13px', color: t.warningText, lineHeight: 1.55 }}>
+                                You must send{' '}
+                                <strong>exactly {payment.amount} {tok?.symbol}</strong>{' '}
+                                on <strong>{ch?.name}</strong>. Sending a different amount or asset may result in loss of funds.
                             </p>
                         </div>
+                    )}
 
-                        {/* QR Code State */}
-                        {showQR && payment.quote && (
-                            <>
-                                {/* QR Code - white on dark background */}
-                                <div style={styles.qrContainer}>
-                                    <QRCodeSVG
-                                        value={payment.quote.depositAddress}
-                                        size={180}
-                                        level="M"
-                                        bgColor="transparent"
-                                        fgColor="white"
-                                    />
-                                </div>
+                    {/* Confirm button */}
+                    <button disabled={!canSubmit || isQuoting} onClick={() => payment.fetchQuote()}
+                        style={primaryBtn(!canSubmit || isQuoting)}>
+                        {isQuoting
+                            ? <><Spinner color={t.btnText} /> Getting quote…</>
+                            : 'Confirm Payment'
+                        }
+                    </button>
 
-                                {/* Address with copy button */}
-                                <div style={styles.addressContainer}>
-                                    <span style={styles.addressText}>
-                                        {payment.quote.depositAddress.slice(0, 8)}...
-                                        {payment.quote.depositAddress.slice(-8)}
-                                    </span>
-                                    <button
-                                        style={styles.copyButton}
-                                        onClick={handleCopy}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-                                        }}
-                                    >
-                                        {copied ? <CheckSmallIcon /> : <CopyIcon />}
-                                    </button>
-                                </div>
+                    {!payment.refundAddress.trim() && (
+                        <p style={{ textAlign: 'center', fontSize: '12px', color: t.error, margin: '10px 0 0' }}>
+                            Enter a refund address on {ch?.name || 'the source chain'} to continue.
+                        </p>
+                    )}
+                </div>
+            </>
+        );
+    };
 
-                                {/* Details with chain/token info */}
-                                <div style={{ ...styles.details, marginTop: '20px' }}>
-                                    <div style={styles.detailRow}>
-                                        <span>Status</span>
-                                        <span
-                                            style={{
-                                                ...styles.statusBadge,
-                                                ...styles.processingBadge,
-                                            }}
-                                        >
-                                            <PulseIcon /> {payment.paymentState === 'processing' ? 'Processing deposit...' : 'Waiting for deposit'}
-                                        </span>
-                                    </div>
-                                    <div style={styles.detailRow}>
-                                        <span>Amount to send</span>
-                                        <span style={styles.detailValue}>
-                                            {payment.amount} {payment.selectedToken?.symbol}
-                                            <span style={styles.tokenBadge}>
-                                                {payment.selectedChain?.name}
-                                            </span>
-                                        </span>
-                                    </div>
-                                    <div style={styles.detailRow}>
-                                        <span>You receive</span>
-                                        <span style={styles.detailValue}>
-                                            ~{payment.quote.amountOutFormatted}{' '}
-                                            {payment.destinationToken.symbol}
-                                            <span style={styles.tokenBadge}>{payment.destinationToken.chain}</span>
-                                        </span>
-                                    </div>
-                                </div>
-                            </>
-                        )}
+    // ── Payment / QR step ─────────────────────────────────────────────────────
 
-                        {/* Selection State */}
-                        {!showQR && !isSuccess && (
-                            <>
-                                {/* Chain & Token Selectors */}
-                                <div style={styles.selectorsRow}>
-                                    {/* Chain Selector */}
-                                    <div style={{ position: 'relative' }}>
-                                        <div
-                                            style={styles.selector}
-                                            onClick={() => {
-                                                setChainDropdownOpen(!chainDropdownOpen);
-                                                setTokenDropdownOpen(false);
-                                            }}
-                                        >
-                                            <div
-                                                style={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: '12px',
-                                                }}
-                                            >
-                                                <div style={styles.selectorIcon}>
-                                                    {payment.selectedChain ? (
-                                                        <img
-                                                            src={payment.selectedChain.icon}
-                                                            alt=""
-                                                            style={{
-                                                                width: '100%',
-                                                                height: '100%',
-                                                            }}
-                                                        />
-                                                    ) : (
-                                                        <GlobeIcon />
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <div style={styles.selectorLabel}>
-                                                        Chain
-                                                    </div>
-                                                    <div style={styles.selectorValue}>
-                                                        {payment.selectedChain?.name ||
-                                                            'Select'}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <ChevronIcon />
-                                        </div>
+    const renderPaymentStep = () => {
+        const { quote } = payment;
+        const isProcessing = paymentState === 'processing';
+        return (
+            <>
+                {renderHeader(`Send ${payment.amount} ${payment.selectedToken?.symbol ?? ''} on ${payment.selectedChain?.name ?? ''}`)}
+                <div style={{ padding: '4px 20px 24px' }}>
+                    {quote && (
+                        <>
+                            {/* QR — always white bg for scannability */}
+                            <div style={{
+                                background: '#ffffff', borderRadius: '16px', padding: '20px',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                border: `1px solid ${t.border}`, marginBottom: '14px',
+                            }}>
+                                <QRCodeSVG value={quote.depositAddress} size={200} level="M"
+                                    bgColor="#ffffff" fgColor="#000000" />
+                            </div>
 
-                                        {/* Chain Dropdown */}
-                                        {chainDropdownOpen && (
-                                            <div style={styles.dropdown}>
-                                                {payment.chains.map((chain) => (
-                                                    <div
-                                                        key={chain.id}
-                                                        style={styles.dropdownItem}
-                                                        onClick={() => {
-                                                            payment.setSelectedChain(chain);
-                                                            setChainDropdownOpen(false);
-                                                        }}
-                                                        onMouseEnter={(e) => {
-                                                            e.currentTarget.style.background =
-                                                                'rgba(255,255,255,0.1)';
-                                                        }}
-                                                        onMouseLeave={(e) => {
-                                                            e.currentTarget.style.background =
-                                                                'transparent';
-                                                        }}
-                                                    >
-                                                        <img
-                                                            src={chain.icon}
-                                                            alt=""
-                                                            style={{
-                                                                width: '24px',
-                                                                height: '24px',
-                                                                borderRadius: '50%',
-                                                            }}
-                                                        />
-                                                        <span
-                                                            style={{
-                                                                color: 'white',
-                                                                fontSize: '14px',
-                                                            }}
-                                                        >
-                                                            {chain.name}
-                                                        </span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Token Selector */}
-                                    <div style={{ position: 'relative' }}>
-                                        <div
-                                            style={{
-                                                ...styles.selector,
-                                                opacity: payment.selectedChain ? 1 : 0.5,
-                                                pointerEvents: payment.selectedChain
-                                                    ? 'auto'
-                                                    : 'none',
-                                            }}
-                                            onClick={() => {
-                                                if (payment.selectedChain) {
-                                                    setTokenDropdownOpen(!tokenDropdownOpen);
-                                                    setChainDropdownOpen(false);
-                                                }
-                                            }}
-                                        >
-                                            <div
-                                                style={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: '12px',
-                                                }}
-                                            >
-                                                <div style={styles.selectorIcon}>
-                                                    {payment.selectedToken ? (
-                                                        <img
-                                                            src={payment.selectedToken.icon}
-                                                            alt=""
-                                                            style={{
-                                                                width: '100%',
-                                                                height: '100%',
-                                                            }}
-                                                        />
-                                                    ) : (
-                                                        <DollarIcon />
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <div style={styles.selectorLabel}>
-                                                        Token
-                                                    </div>
-                                                    <div style={styles.selectorValue}>
-                                                        {payment.selectedToken?.symbol ||
-                                                            'Select'}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <ChevronIcon />
-                                        </div>
-
-                                        {/* Token Dropdown */}
-                                        {tokenDropdownOpen && (
-                                            <div style={styles.dropdown}>
-                                                {payment.tokens.map((token) => (
-                                                    <div
-                                                        key={token.assetId}
-                                                        style={styles.dropdownItem}
-                                                        onClick={() => {
-                                                            payment.setSelectedToken(token);
-                                                            setTokenDropdownOpen(false);
-                                                        }}
-                                                        onMouseEnter={(e) => {
-                                                            e.currentTarget.style.background =
-                                                                'rgba(255,255,255,0.1)';
-                                                        }}
-                                                        onMouseLeave={(e) => {
-                                                            e.currentTarget.style.background =
-                                                                'transparent';
-                                                        }}
-                                                    >
-                                                        <img
-                                                            src={token.icon}
-                                                            alt=""
-                                                            style={{
-                                                                width: '24px',
-                                                                height: '24px',
-                                                                borderRadius: '50%',
-                                                            }}
-                                                        />
-                                                        <span
-                                                            style={{
-                                                                color: 'white',
-                                                                fontSize: '14px',
-                                                            }}
-                                                        >
-                                                            {token.symbol}
-                                                        </span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Amount Input */}
-                                <input
-                                    type="text"
-                                    inputMode="decimal"
-                                    placeholder="0.00"
-                                    value={payment.amount}
-                                    onChange={(e) => payment.setAmount(e.target.value)}
-                                    style={styles.amountInput}
-                                />
-
-                                {/* Details - only show "You receive" after amount entered */}
-                                <div style={styles.details}>
-                                    {payment.amount && (
-                                        <div style={styles.detailRow}>
-                                            <span>You receive</span>
-                                            {payment.isLoadingPreview ? (
-                                                <div style={{ display: 'flex', gap: '4px' }}>
-                                                    <div style={styles.loadingDot} />
-                                                    <div style={{ ...styles.loadingDot, animationDelay: '0.2s' }} />
-                                                    <div style={{ ...styles.loadingDot, animationDelay: '0.4s' }} />
-                                                </div>
-                                            ) : payment.previewQuote ? (
-                                                <span style={styles.detailValue}>
-                                                    ~{payment.previewQuote.amountOutFormatted}{' '}
-                                                    {payment.destinationToken.symbol}
-                                                </span>
-                                            ) : (
-                                                <span style={{ color: 'rgba(255,255,255,0.3)' }}>
-                                                    Enter amount...
-                                                </span>
-                                            )}
-                                        </div>
-                                    )}
-                                    <div style={styles.detailRow}>
-                                        <span>Destination</span>
-                                        <span style={styles.detailValue}>
-                                            {payment.destinationToken.symbol}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Submit Button */}
-                                <button
+                            {/* Address + copy */}
+                            <div style={{
+                                display: 'flex', alignItems: 'center', gap: '10px',
+                                padding: '11px 13px', background: t.inputBg,
+                                borderRadius: '10px', marginBottom: '14px',
+                                border: `1px solid ${t.border}`,
+                            }}>
+                                <span style={{
+                                    flex: 1, fontSize: '11px', color: t.textSecondary,
+                                    fontFamily: 'monospace', wordBreak: 'break-all', lineHeight: 1.5,
+                                }}>
+                                    {quote.depositAddress}
+                                </span>
+                                <button onClick={handleCopy} title="Copy address"
                                     style={{
-                                        ...styles.button,
-                                        ...(!canSubmit || isProcessing
-                                            ? styles.buttonDisabled
-                                            : {}),
-                                    }}
-                                    disabled={!canSubmit || isProcessing}
-                                    onClick={() => payment.fetchQuote()}
-                                >
-                                    <div style={styles.buttonInner}>
-                                        {isProcessing ? (
-                                            <>
-                                                <SpinnerIcon /> Processing...
-                                            </>
-                                        ) : (
-                                            <>
-                                                Confirm Payment
-                                                <ArrowIcon />
-                                            </>
-                                        )}
-                                    </div>
+                                        flexShrink: 0, width: 34, height: 34, borderRadius: '8px',
+                                        background: copied ? `${t.success}18` : t.iconBtnBg,
+                                        border: `1px solid ${copied ? t.success + '44' : t.border}`,
+                                        cursor: 'pointer', display: 'flex', alignItems: 'center',
+                                        justifyContent: 'center', transition: 'all 0.2s',
+                                    }}>
+                                    {copied ? <CheckMark color={t.success} /> : <CopyIcon color={t.textMuted} />}
                                 </button>
-                            </>
-                        )}
-                    </>
-                )}
+                            </div>
 
-                {/* Powered by */}
-                <p
-                    style={{
-                        textAlign: 'center',
-                        fontSize: '10px',
-                        color: 'rgba(255,255,255,0.3)',
-                        marginTop: '16px',
-                    }}
-                >
-                    Powered by Uniport • NEAR Intents
+                            {/* Send-exactly warning */}
+                            <div style={{ ...warningBox, marginBottom: '14px' }}>
+                                <WarningTriangle color={t.warning} />
+                                <p style={{ margin: 0, fontSize: '13px', color: t.warningText, lineHeight: 1.55 }}>
+                                    Only send{' '}
+                                    <strong>{payment.amount} {payment.selectedToken?.symbol}</strong>{' '}
+                                    on <strong>{payment.selectedChain?.name}</strong> to this address. Other assets may be permanently lost.
+                                </p>
+                            </div>
+
+                            {/* Details */}
+                            <div style={{ borderTop: `1px solid ${t.border}`, paddingTop: '12px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                                    <span style={{ fontSize: '13px', color: t.textMuted }}>You'll receive</span>
+                                    <span style={{ fontSize: '13px', fontWeight: 600, color: t.text }}>
+                                        ≈{quote.amountOutFormatted} {payment.destinationToken.symbol}
+                                    </span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '13px', color: t.textMuted }}>Status</span>
+                                    <span style={{
+                                        fontSize: '13px', fontWeight: 600,
+                                        color: isProcessing ? t.accent : t.warning,
+                                        display: 'flex', alignItems: 'center', gap: '6px',
+                                    }}>
+                                        {isProcessing
+                                            ? <><Spinner color={t.accent} /> Processing…</>
+                                            : <>
+                                                <div style={{
+                                                    width: 8, height: 8, borderRadius: '50%',
+                                                    background: t.warning,
+                                                    animation: 'uniport-pulse 1.5s ease infinite',
+                                                }} />
+                                                Waiting for deposit
+                                            </>
+                                        }
+                                    </span>
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </div>
+            </>
+        );
+    };
+
+    // ── Success step ──────────────────────────────────────────────────────────
+
+    const renderSuccessStep = () => (
+        <div style={{ position: 'relative' }}>
+            <button style={{ ...iconBtn, position: 'absolute', top: 18, right: 18 }}
+                onClick={handleClose}
+                onMouseEnter={e => { e.currentTarget.style.background = t.iconBtnHover; }}
+                onMouseLeave={e => { e.currentTarget.style.background = t.iconBtnBg; }}
+            >
+                <XMark color={t.iconBtnColor} />
+            </button>
+            <div style={{ padding: '44px 24px 28px', textAlign: 'center' }}>
+                <div style={{
+                    width: 72, height: 72, borderRadius: '50%',
+                    background: `${t.success}18`, border: `2px solid ${t.success}55`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    margin: '0 auto 20px',
+                }}>
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                        <path d="M20 6L9 17l-5-5" stroke={t.success} strokeWidth="2.5"
+                            strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                </div>
+                <h2 style={{ margin: '0 0 8px', fontSize: '20px', fontWeight: 700, color: t.text, letterSpacing: '-0.02em' }}>
+                    Payment sent!
+                </h2>
+                <p style={{ margin: '0 0 24px', fontSize: '14px', color: t.textMuted, lineHeight: 1.6 }}>
+                    {payment.amount} {payment.selectedToken?.symbol}
+                    {' → '}≈{payment.quote?.amountOutFormatted} {payment.destinationToken.symbol}
                 </p>
+                <button onClick={() => setShowReceipt(p => !p)}
+                    style={{
+                        background: 'transparent', border: 'none', color: t.accent,
+                        fontSize: '14px', cursor: 'pointer', textDecoration: 'underline',
+                        marginBottom: showReceipt ? 14 : 0, fontFamily: 'inherit',
+                    }}>
+                    {showReceipt ? 'Hide receipt' : 'View receipt'}
+                </button>
+                {showReceipt && (
+                    <div style={{ background: t.inputBg, borderRadius: '12px', padding: '14px', textAlign: 'left', marginBottom: '20px' }}>
+                        {payment.status?.originTxHashes?.map((hash, i) => (
+                            <div key={`o${i}`} style={{ marginBottom: 10 }}>
+                                <p style={{ color: t.textMuted, fontSize: '11px', margin: '0 0 3px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    Source TX · {payment.selectedChain?.name}
+                                </p>
+                                <a href={`https://etherscan.io/tx/${hash}`} target="_blank" rel="noopener noreferrer"
+                                    style={{ color: t.accent, fontSize: '12px', fontFamily: 'monospace', textDecoration: 'none' }}>
+                                    {hash.slice(0, 12)}…{hash.slice(-8)} ↗
+                                </a>
+                            </div>
+                        ))}
+                        {payment.status?.destinationTxHashes?.map((hash, i) => (
+                            <div key={`d${i}`}>
+                                <p style={{ color: t.textMuted, fontSize: '11px', margin: '0 0 3px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    Destination TX
+                                </p>
+                                <span style={{ color: t.textSecondary, fontSize: '12px', fontFamily: 'monospace' }}>
+                                    {hash.slice(0, 12)}…{hash.slice(-8)}
+                                </span>
+                            </div>
+                        ))}
+                        {!payment.status?.originTxHashes?.length && !payment.status?.destinationTxHashes?.length && (
+                            <p style={{ color: t.textMuted, fontSize: '13px', margin: 0 }}>Loading transaction details…</p>
+                        )}
+                    </div>
+                )}
+                <button onClick={handleClose} style={primaryBtn(false)}>Done</button>
             </div>
         </div>
     );
-}
 
+    // ── Error step ────────────────────────────────────────────────────────────
 
-// ============================================================================
-// ICONS
-// ============================================================================
-
-function CloseIcon() {
-    return (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <path
-                d="M18 6L6 18M6 6L18 18"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-            />
-        </svg>
+    const renderErrorStep = () => (
+        <div style={{ position: 'relative' }}>
+            <button style={{ ...iconBtn, position: 'absolute', top: 18, right: 18 }}
+                onClick={handleClose}
+                onMouseEnter={e => { e.currentTarget.style.background = t.iconBtnHover; }}
+                onMouseLeave={e => { e.currentTarget.style.background = t.iconBtnBg; }}
+            >
+                <XMark color={t.iconBtnColor} />
+            </button>
+            <div style={{ padding: '44px 24px 28px', textAlign: 'center' }}>
+                <div style={{
+                    width: 72, height: 72, borderRadius: '50%',
+                    background: `${t.error}18`, border: `2px solid ${t.error}44`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    margin: '0 auto 20px',
+                }}>
+                    <XMark color={t.error} />
+                </div>
+                <h2 style={{ margin: '0 0 8px', fontSize: '20px', fontWeight: 700, color: t.text, letterSpacing: '-0.02em' }}>
+                    Payment failed
+                </h2>
+                <p style={{ margin: '0 0 28px', fontSize: '14px', color: t.textMuted, lineHeight: 1.6 }}>
+                    {payment.error?.message || 'Something went wrong. Please try again.'}
+                </p>
+                <button onClick={() => { payment.reset(); setModalStep('chain'); }}
+                    style={{ ...primaryBtn(false), background: 'transparent', border: `1.5px solid ${t.border}`, color: t.text }}>
+                    Try again
+                </button>
+            </div>
+        </div>
     );
-}
 
-function CardIcon() {
-    return (
-        <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="rgba(255,255,255,0.9)"
-            strokeWidth="1.5"
+    // ── Routing ───────────────────────────────────────────────────────────────
+
+    const renderContent = () => {
+        if (isSuccess) return renderSuccessStep();
+        if (isError)   return renderErrorStep();
+        if (showQR)    return renderPaymentStep();
+        if (modalStep === 'chain')  return renderChainStep();
+        if (modalStep === 'token')  return renderTokenStep();
+        return renderAmountStep();
+    };
+
+    // ── Portal render — bypasses all parent stacking contexts ─────────────────
+
+    return ReactDOM.createPortal(
+        <div
+            style={{
+                // This overlay must live at the top of the DOM stacking order.
+                // By portaling into document.body we escape any parent element that
+                // has transform, filter, or backdrop-filter (all of which would
+                // otherwise break position:fixed, making it relative to that element
+                // rather than the viewport).
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 2147483647, // max z-index
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '16px',
+                // Overlay colour + frosted effect applied here (on the backdrop),
+                // NOT on the modal card itself.
+                backgroundColor: t.overlay,
+                backdropFilter: 'blur(18px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(18px) saturate(180%)',
+                animation: 'uniport-fade-in 0.18s ease',
+            }}
+            onClick={handleClose}
         >
-            <path d="M3 10h18M7 15h2m4 0h4M6 19h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-        </svg>
-    );
-}
-
-function GlobeIcon() {
-    return (
-        <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#818CF8"
-            strokeWidth="1.5"
-        >
-            <circle cx="12" cy="12" r="10" />
-            <path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
-        </svg>
-    );
-}
-
-function DollarIcon() {
-    return (
-        <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#22D3EE"
-            strokeWidth="1.5"
-        >
-            <circle cx="12" cy="12" r="10" />
-            <path d="M12 6v12M15 9.5a3 3 0 00-3-2.5h-1a2.5 2.5 0 000 5h2a2.5 2.5 0 010 5H12a3 3 0 01-3-2.5" />
-        </svg>
-    );
-}
-
-function ChevronIcon() {
-    return (
-        <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="rgba(255,255,255,0.4)"
-            strokeWidth="2"
-        >
-            <path d="M6 9l6 6 6-6" />
-        </svg>
-    );
-}
-
-
-
-
-function CheckSmallIcon() {
-    return (
-        <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#10B981"
-            strokeWidth="2"
-        >
-            <path d="M20 6L9 17l-5-5" />
-        </svg>
-    );
-}
-
-function CopyIcon() {
-    return (
-        <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="rgba(255,255,255,0.7)"
-            strokeWidth="2"
-        >
-            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-        </svg>
-    );
-}
-
-function PulseIcon() {
-    return (
-        <svg width="8" height="8" viewBox="0 0 8 8">
-            <circle
-                cx="4"
-                cy="4"
-                r="4"
-                fill="#818CF8"
-                style={{ animation: 'uniport-pulse 1s ease infinite' }}
-            />
-        </svg>
-    );
-}
-
-function SpinnerIcon() {
-    return (
-        <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            style={{ animation: 'spin 1s linear infinite' }}
-        >
-            <circle
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="rgba(255,255,255,0.2)"
-                strokeWidth="3"
-            />
-            <path
-                d="M12 2a10 10 0 019.95 9"
-                stroke="white"
-                strokeWidth="3"
-                strokeLinecap="round"
-            />
-        </svg>
-    );
-}
-
-function ArrowIcon() {
-    return (
-        <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-        >
-            <path d="M5 12h14M12 5l7 7-7 7" />
-        </svg>
+            <div
+                onClick={e => e.stopPropagation()}
+                style={{
+                    position: 'relative',
+                    width: '100%',
+                    maxWidth: '440px',
+                    // Solid card — no glassmorphism on the card itself
+                    background: t.modalBg,
+                    borderRadius: '20px',
+                    boxShadow: themeMode === 'light'
+                        ? '0 24px 64px rgba(0,0,0,0.14), 0 0 0 1px rgba(0,0,0,0.06)'
+                        : '0 24px 64px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06)',
+                    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                    // Only the initial modal mount gets the slide-up animation.
+                    // Content transitions (chain→token→amount) use plain renders,
+                    // not component remounts, so polling re-renders don't re-trigger it.
+                    animation: 'uniport-slide-up 0.22s ease',
+                    overflow: 'hidden',
+                    maxHeight: '90vh',
+                    display: 'flex',
+                    flexDirection: 'column',
+                }}
+            >
+                {renderContent()}
+            </div>
+        </div>,
+        portalRoot
     );
 }
