@@ -5,3 +5,4 @@
 export * from './tokens';
 export * from './intents';
 export * from './config';
+export * from './ens';

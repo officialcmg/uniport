@@ -6,6 +6,9 @@ import React, { useEffect, useCallback, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { useUniportPayment } from '../hooks/useUniportPayment';
+import { CHAINS, getExplorerTxUrl, isEvmChain } from '../core/tokens';
+import { UNIPORT_ENS_NAME } from '../core/ens';
+import { formatDisplayAmount } from '../core/intents';
 import type { UniportModalProps } from '../types';
 
 // ============================================================================
@@ -320,7 +323,7 @@ export function UniportModal({
     });
 
     const [modalStep, setModalStep] = useState<ModalStep>('chain');
-    const [copied, setCopied] = useState(false);
+    const [copiedField, setCopiedField] = useState<'address' | 'memo' | null>(null);
     const [showReceipt, setShowReceipt] = useState(false);
 
     // Portal target — resolved once on mount, never changes
@@ -356,11 +359,9 @@ export function UniportModal({
         }
     }, [open, handleClose]);
 
-    const handleCopy = useCallback(async () => {
-        if (payment.quote?.depositAddress) {
-            const ok = await payment.copyToClipboard(payment.quote.depositAddress);
-            if (ok) { setCopied(true); setTimeout(() => setCopied(false), 2000); }
-        }
+    const handleCopy = useCallback(async (field: 'address' | 'memo', text: string) => {
+        const ok = await payment.copyToClipboard(text);
+        if (ok) { setCopiedField(field); setTimeout(() => setCopiedField(null), 2000); }
     }, [payment]);
 
     if (!open || !portalRoot) return null;
@@ -374,12 +375,12 @@ export function UniportModal({
     const canSubmit = !!(
         payment.selectedToken &&
         payment.amount &&
-        payment.refundAddress.trim()
+        payment.effectiveRefundAddress
     );
     const canPreviewEstimate = !!(
         payment.selectedToken &&
         payment.amount &&
-        payment.refundAddress.trim()
+        payment.effectiveRefundAddress
     );
     const showBack  = !isSuccess && !isError && (showQR || modalStep !== 'chain');
 
@@ -571,12 +572,19 @@ export function UniportModal({
                             }}
                         >
                             Refund address on {ch?.name || 'the source chain'}
+                            {ch && isEvmChain(ch.id) && (
+                                <span style={{ fontWeight: 400, color: t.textMuted }}> (optional)</span>
+                            )}
                         </label>
                         <input
                             type="text"
                             value={payment.refundAddress}
                             onChange={(e) => payment.setRefundAddress(e.target.value)}
-                            placeholder={`Enter a ${ch?.name || 'source chain'} refund address`}
+                            placeholder={
+                                ch && isEvmChain(ch.id)
+                                    ? `Optional — defaults to ${UNIPORT_ENS_NAME}`
+                                    : `Enter a ${ch?.name || 'source chain'} refund address`
+                            }
                             spellCheck={false}
                             autoCapitalize="off"
                             autoCorrect="off"
@@ -600,9 +608,22 @@ export function UniportModal({
                                 lineHeight: 1.5,
                             }}
                         >
-                            Used only if the swap fails. This address must live on the
-                            chain the payer is sending from.
+                            {payment.isUsingDefaultRefundAddress
+                                ? `Used only if the swap fails. You can enter your own address, or leave blank to use Uniport's default (${UNIPORT_ENS_NAME}).`
+                                : 'Used only if the swap fails. This address must live on the chain the payer is sending from.'}
                         </p>
+                        {ch?.id === 'stellar' && tok?.symbol !== 'XLM' && (
+                            <p
+                                style={{
+                                    margin: '6px 0 0',
+                                    fontSize: '12px',
+                                    color: t.warning,
+                                    lineHeight: 1.5,
+                                }}
+                            >
+                                This refund address must already have a trustline for {tok?.symbol} on Stellar, or a refund cannot be delivered to it.
+                            </p>
+                        )}
                     </div>
 
                     {/* Live preview */}
@@ -626,7 +647,7 @@ export function UniportModal({
                             <span style={{ fontSize: '15px', color: t.textSecondary }}>
                                 You will receive{' '}
                                 <strong style={{ color: t.text }}>
-                                    {payment.previewQuote.amountOutFormatted}{' '}
+                                    {formatDisplayAmount(payment.previewQuote.amountOutFormatted)}{' '}
                                     {payment.destinationToken.symbol}
                                 </strong>{' '}
                                 on{' '}
@@ -673,7 +694,7 @@ export function UniportModal({
                         }
                     </button>
 
-                    {!payment.refundAddress.trim() && (
+                    {!payment.effectiveRefundAddress && (
                         <p style={{ textAlign: 'center', fontSize: '12px', color: t.error, margin: '10px 0 0' }}>
                             Enter a refund address on {ch?.name || 'the source chain'} to continue.
                         </p>
@@ -708,7 +729,7 @@ export function UniportModal({
                             <div style={{
                                 display: 'flex', alignItems: 'center', gap: '10px',
                                 padding: '11px 13px', background: t.inputBg,
-                                borderRadius: '10px', marginBottom: '14px',
+                                borderRadius: '10px', marginBottom: quote.memo ? '10px' : '14px',
                                 border: `1px solid ${t.border}`,
                             }}>
                                 <span style={{
@@ -717,17 +738,50 @@ export function UniportModal({
                                 }}>
                                     {quote.depositAddress}
                                 </span>
-                                <button onClick={handleCopy} title="Copy address"
+                                <button onClick={() => handleCopy('address', quote.depositAddress)} title="Copy address"
                                     style={{
                                         flexShrink: 0, width: 34, height: 34, borderRadius: '8px',
-                                        background: copied ? `${t.success}18` : t.iconBtnBg,
-                                        border: `1px solid ${copied ? t.success + '44' : t.border}`,
+                                        background: copiedField === 'address' ? `${t.success}18` : t.iconBtnBg,
+                                        border: `1px solid ${copiedField === 'address' ? t.success + '44' : t.border}`,
                                         cursor: 'pointer', display: 'flex', alignItems: 'center',
                                         justifyContent: 'center', transition: 'all 0.2s',
                                     }}>
-                                    {copied ? <CheckMark color={t.success} /> : <CopyIcon color={t.textMuted} />}
+                                    {copiedField === 'address' ? <CheckMark color={t.success} /> : <CopyIcon color={t.textMuted} />}
                                 </button>
                             </div>
+
+                            {/* Memo — required by some chains (Stellar, TON, XRP). Just as
+                                load-bearing as the address: omitting it can strand funds. */}
+                            {quote.memo && (
+                                <div style={{
+                                    display: 'flex', alignItems: 'center', gap: '10px',
+                                    padding: '11px 13px', background: `${t.warning}0f`,
+                                    borderRadius: '10px', marginBottom: '14px',
+                                    border: `1px solid ${t.warning}44`,
+                                }}>
+                                    <div style={{ flex: 1 }}>
+                                        <p style={{ margin: '0 0 3px', fontSize: '11px', color: t.warning, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                            Memo required
+                                        </p>
+                                        <span style={{
+                                            fontSize: '13px', color: t.text,
+                                            fontFamily: 'monospace', wordBreak: 'break-all', lineHeight: 1.4,
+                                        }}>
+                                            {quote.memo}
+                                        </span>
+                                    </div>
+                                    <button onClick={() => handleCopy('memo', quote.memo!)} title="Copy memo"
+                                        style={{
+                                            flexShrink: 0, width: 34, height: 34, borderRadius: '8px',
+                                            background: copiedField === 'memo' ? `${t.success}18` : t.iconBtnBg,
+                                            border: `1px solid ${copiedField === 'memo' ? t.success + '44' : t.border}`,
+                                            cursor: 'pointer', display: 'flex', alignItems: 'center',
+                                            justifyContent: 'center', transition: 'all 0.2s',
+                                        }}>
+                                        {copiedField === 'memo' ? <CheckMark color={t.success} /> : <CopyIcon color={t.textMuted} />}
+                                    </button>
+                                </div>
+                            )}
 
                             {/* Send-exactly warning */}
                             <div style={{ ...warningBox, marginBottom: '14px' }}>
@@ -735,7 +789,9 @@ export function UniportModal({
                                 <p style={{ margin: 0, fontSize: '13px', color: t.warningText, lineHeight: 1.55 }}>
                                     Only send{' '}
                                     <strong>{payment.amount} {payment.selectedToken?.symbol}</strong>{' '}
-                                    on <strong>{payment.selectedChain?.name}</strong> to this address. Other assets may be permanently lost.
+                                    on <strong>{payment.selectedChain?.name}</strong> to this address
+                                    {quote.memo && <> <strong>with the memo above</strong></>}. Other assets may be permanently lost
+                                    {quote.memo && <>, and omitting the memo may make your deposit unrecoverable</>}.
                                 </p>
                             </div>
 
@@ -744,7 +800,7 @@ export function UniportModal({
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                                     <span style={{ fontSize: '13px', color: t.textMuted }}>You'll receive</span>
                                     <span style={{ fontSize: '13px', fontWeight: 600, color: t.text }}>
-                                        ≈{quote.amountOutFormatted} {payment.destinationToken.symbol}
+                                        ≈{formatDisplayAmount(quote.amountOutFormatted)} {payment.destinationToken.symbol}
                                     </span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -777,6 +833,19 @@ export function UniportModal({
 
     // ── Success step ──────────────────────────────────────────────────────────
 
+    // Link to the chain's block explorer; plain text if no explorer is mapped.
+    const renderTxHash = (hash: string, url: string | undefined) =>
+        url ? (
+            <a href={url} target="_blank" rel="noopener noreferrer"
+                style={{ color: t.accent, fontSize: '12px', fontFamily: 'monospace', textDecoration: 'none' }}>
+                {hash.slice(0, 12)}…{hash.slice(-8)} ↗
+            </a>
+        ) : (
+            <span style={{ color: t.textSecondary, fontSize: '12px', fontFamily: 'monospace' }}>
+                {hash.slice(0, 12)}…{hash.slice(-8)}
+            </span>
+        );
+
     const renderSuccessStep = () => (
         <div style={{ position: 'relative' }}>
             <button style={{ ...iconBtn, position: 'absolute', top: 18, right: 18 }}
@@ -803,7 +872,7 @@ export function UniportModal({
                 </h2>
                 <p style={{ margin: '0 0 24px', fontSize: '14px', color: t.textMuted, lineHeight: 1.6 }}>
                     {payment.amount} {payment.selectedToken?.symbol}
-                    {' → '}≈{payment.quote?.amountOutFormatted} {payment.destinationToken.symbol}
+                    {' → '}≈{formatDisplayAmount(payment.quote?.amountOutFormatted)} {payment.destinationToken.symbol}
                 </p>
                 <button onClick={() => setShowReceipt(p => !p)}
                     style={{
@@ -820,20 +889,17 @@ export function UniportModal({
                                 <p style={{ color: t.textMuted, fontSize: '11px', margin: '0 0 3px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                     Source TX · {payment.selectedChain?.name}
                                 </p>
-                                <a href={`https://etherscan.io/tx/${hash}`} target="_blank" rel="noopener noreferrer"
-                                    style={{ color: t.accent, fontSize: '12px', fontFamily: 'monospace', textDecoration: 'none' }}>
-                                    {hash.slice(0, 12)}…{hash.slice(-8)} ↗
-                                </a>
+                                {renderTxHash(hash, payment.selectedChain
+                                    ? getExplorerTxUrl(payment.selectedChain.id, hash)
+                                    : undefined)}
                             </div>
                         ))}
                         {payment.status?.destinationTxHashes?.map((hash, i) => (
                             <div key={`d${i}`}>
                                 <p style={{ color: t.textMuted, fontSize: '11px', margin: '0 0 3px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    Destination TX
+                                    Destination TX · {CHAINS[payment.destinationToken.chain].name}
                                 </p>
-                                <span style={{ color: t.textSecondary, fontSize: '12px', fontFamily: 'monospace' }}>
-                                    {hash.slice(0, 12)}…{hash.slice(-8)}
-                                </span>
+                                {renderTxHash(hash, getExplorerTxUrl(payment.destinationToken.chain, hash))}
                             </div>
                         ))}
                         {!payment.status?.originTxHashes?.length && !payment.status?.destinationTxHashes?.length && (

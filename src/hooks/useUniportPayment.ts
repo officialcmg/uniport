@@ -15,9 +15,14 @@ import {
 import {
     getSupportedChains,
     getToken,
+    isEvmChain,
     type Token,
     type Chain,
 } from '../core/tokens';
+import {
+    getUniportDefaultRefundAddress,
+    UNIPORT_FALLBACK_REFUND_ADDRESS,
+} from '../core/ens';
 import type { PaymentState } from '../types';
 
 export interface UseUniportPaymentOptions {
@@ -44,6 +49,10 @@ export interface UseUniportPaymentReturn {
     selectedToken: Token | null;
     amount: string;
     refundAddress: string;
+    /** refundAddress if provided, otherwise the resolved default (EVM only). May be empty on non-EVM chains. */
+    effectiveRefundAddress: string;
+    /** True when effectiveRefundAddress is the Uniport default rather than user input. */
+    isUsingDefaultRefundAddress: boolean;
     destinationToken: Token;
 
     // Data
@@ -101,6 +110,29 @@ export function useUniportPayment(
     const [refundAddress, setRefundAddressState] = useState(
         initialRefundAddress ?? ''
     );
+
+    // Default refund address for EVM chains (resolved from uniport.eth),
+    // used only when the payer doesn't provide their own refund address.
+    const [evmDefaultRefundAddress, setEvmDefaultRefundAddress] = useState(
+        UNIPORT_FALLBACK_REFUND_ADDRESS
+    );
+    useEffect(() => {
+        let cancelled = false;
+        getUniportDefaultRefundAddress().then((address) => {
+            if (!cancelled) setEvmDefaultRefundAddress(address);
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    // The refund address actually sent with quotes: the payer's input if
+    // provided, otherwise the Uniport default — but only on EVM source chains.
+    const effectiveRefundAddress =
+        refundAddress.trim() ||
+        (selectedChain && isEvmChain(selectedChain.id)
+            ? evmDefaultRefundAddress
+            : '');
 
     // Refs
     const pollingRef = useRef<NodeJS.Timeout | null>(null);
@@ -176,17 +208,22 @@ export function useUniportPayment(
     const setAmount = useCallback(
         (newAmount: string) => {
             setAmountState(newAmount);
-            schedulePreviewQuote(newAmount, refundAddress, selectedToken);
+            schedulePreviewQuote(newAmount, effectiveRefundAddress, selectedToken);
         },
-        [refundAddress, schedulePreviewQuote, selectedToken]
+        [effectiveRefundAddress, schedulePreviewQuote, selectedToken]
     );
 
     const setRefundAddress = useCallback(
         (newRefundAddress: string) => {
             setRefundAddressState(newRefundAddress);
-            schedulePreviewQuote(amount, newRefundAddress, selectedToken);
+            const nextEffective =
+                newRefundAddress.trim() ||
+                (selectedChain && isEvmChain(selectedChain.id)
+                    ? evmDefaultRefundAddress
+                    : '');
+            schedulePreviewQuote(amount, nextEffective, selectedToken);
         },
-        [amount, schedulePreviewQuote, selectedToken]
+        [amount, evmDefaultRefundAddress, schedulePreviewQuote, selectedChain, selectedToken]
     );
 
     // Handle chain selection
@@ -195,19 +232,22 @@ export function useUniportPayment(
         setSelectedChain(chain);
         setSelectedToken(nextToken);
         setPaymentState('selecting');
-        schedulePreviewQuote(amount, refundAddress, nextToken);
-    }, [amount, refundAddress, schedulePreviewQuote]);
+        const nextEffective =
+            refundAddress.trim() ||
+            (isEvmChain(chain.id) ? evmDefaultRefundAddress : '');
+        schedulePreviewQuote(amount, nextEffective, nextToken);
+    }, [amount, evmDefaultRefundAddress, refundAddress, schedulePreviewQuote]);
 
     // Handle token selection
     const handleTokenSelect = useCallback((token: Token) => {
         setSelectedToken(token);
         setPaymentState('selecting');
-        schedulePreviewQuote(amount, refundAddress, token);
-    }, [amount, refundAddress, schedulePreviewQuote]);
+        schedulePreviewQuote(amount, effectiveRefundAddress, token);
+    }, [amount, effectiveRefundAddress, schedulePreviewQuote]);
 
     // Fetch quote (real, non-dry)
     const fetchQuote = useCallback(async () => {
-        if (!selectedToken || !amount || !refundAddress) {
+        if (!selectedToken || !amount || !effectiveRefundAddress) {
             setError(new Error('Missing required fields'));
             return;
         }
@@ -221,7 +261,7 @@ export function useUniportPayment(
                 destinationToken: destToken,
                 amount,
                 recipient,
-                refundTo: refundAddress,
+                refundTo: effectiveRefundAddress,
                 dry: false,
             });
 
@@ -237,7 +277,7 @@ export function useUniportPayment(
     }, [
         selectedToken,
         amount,
-        refundAddress,
+        effectiveRefundAddress,
         recipient,
         destToken,
         onError,
@@ -369,6 +409,9 @@ export function useUniportPayment(
         selectedToken,
         amount,
         refundAddress,
+        effectiveRefundAddress,
+        isUsingDefaultRefundAddress:
+            !refundAddress.trim() && !!effectiveRefundAddress,
         destinationToken: destToken,
         chains,
         tokens,

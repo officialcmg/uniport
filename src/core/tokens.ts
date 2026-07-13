@@ -100,6 +100,7 @@ export const CHAIN_ICONS = {
     bch: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/bitcoincash/info/logo.png',
     xrp: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ripple/info/logo.png',
     zec: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/zcash/info/logo.png',
+    scroll: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/scroll/info/logo.png',
 } as const;
 
 // ============================================================================
@@ -107,6 +108,75 @@ export const CHAIN_ICONS = {
 // ============================================================================
 
 export type ChainId = keyof typeof CHAIN_ICONS;
+
+/** Chains that use EVM-style addresses (0x...), as opposed to chain-specific formats. */
+export const EVM_CHAINS: ChainId[] = [
+    'eth', 'arb', 'base', 'op', 'pol', 'avax', 'bsc', 'gnosis', 'bera', 'monad', 'scroll',
+];
+
+export function isEvmChain(chain: ChainId): boolean {
+    return EVM_CHAINS.includes(chain);
+}
+
+/**
+ * Chains whose deposit transactions require a memo/tag alongside the deposit
+ * address (1Click's `depositMode: MEMO`), without which funds can be lost.
+ *
+ * This list is verified empirically against the live 1Click API, not derived
+ * from documentation — deposit-mode requirements vary per chain and per
+ * asset in ways the API's own docs don't fully specify. Confirmed via direct
+ * quote requests: Stellar requires MEMO (rejects quotes without it); TON and
+ * XRP do not use MEMO mode at all (their assets settle with SIMPLE deposits
+ * and never populate a memo). If a new memo-requiring chain is added, verify
+ * it live the same way before adding it here.
+ */
+export const CHAINS_REQUIRING_MEMO: ChainId[] = ['stellar'];
+
+export function needsMemoDeposit(chain: ChainId): boolean {
+    return CHAINS_REQUIRING_MEMO.includes(chain);
+}
+
+// ============================================================================
+// BLOCK EXPLORERS
+// ============================================================================
+
+/** Per-chain transaction explorer URL builders */
+const EXPLORER_TX_URLS: Record<ChainId, (hash: string) => string> = {
+    eth: (h) => `https://etherscan.io/tx/${h}`,
+    arb: (h) => `https://arbiscan.io/tx/${h}`,
+    base: (h) => `https://basescan.org/tx/${h}`,
+    op: (h) => `https://optimistic.etherscan.io/tx/${h}`,
+    pol: (h) => `https://polygonscan.com/tx/${h}`,
+    avax: (h) => `https://snowtrace.io/tx/${h}`,
+    bsc: (h) => `https://bscscan.com/tx/${h}`,
+    gnosis: (h) => `https://gnosisscan.io/tx/${h}`,
+    bera: (h) => `https://berascan.com/tx/${h}`,
+    monad: (h) => `https://monadvision.com/tx/${h}`,
+    sui: (h) => `https://suivision.xyz/txblock/${h}`,
+    sol: (h) => `https://solscan.io/tx/${h}`,
+    btc: (h) => `https://mempool.space/tx/${h}`,
+    near: (h) => `https://nearblocks.io/txns/${h}`,
+    ton: (h) => `https://tonviewer.com/transaction/${h}`,
+    tron: (h) => `https://tronscan.org/#/transaction/${h}`,
+    stellar: (h) => `https://stellar.expert/explorer/public/tx/${h}`,
+    cardano: (h) => `https://cardanoscan.io/transaction/${h}`,
+    aptos: (h) => `https://explorer.aptoslabs.com/txn/${h}?network=mainnet`,
+    starknet: (h) => `https://voyager.online/tx/${h}`,
+    doge: (h) => `https://dogechain.info/tx/${h}`,
+    ltc: (h) => `https://litecoinspace.org/tx/${h}`,
+    bch: (h) => `https://blockchair.com/bitcoin-cash/transaction/${h}`,
+    xrp: (h) => `https://xrpscan.com/tx/${h}`,
+    zec: (h) => `https://blockchair.com/zcash/transaction/${h}`,
+    scroll: (h) => `https://scrollscan.com/tx/${h}`,
+};
+
+/** Build a block-explorer URL for a transaction hash on a given chain. */
+export function getExplorerTxUrl(
+    chain: ChainId,
+    hash: string
+): string | undefined {
+    return EXPLORER_TX_URLS[chain]?.(hash);
+}
 
 export interface Token {
     /** Readable name: arbitrumUSDC, suiSUI */
@@ -235,6 +305,13 @@ export const baseCbBTC = createToken('base', 'cbBTC', 'nep141:base-0xcbb7c0000ab
 export const baseBRETT = createToken('base', 'BRETT', 'nep141:base-0x532f27101965dd16442e59d40670faf5ebb142e4.omft.near', 18, '0x532f27101965dd16442e59d40670faf5ebb142e4');
 
 // ============================================================================
+// SCROLL TOKENS
+// ============================================================================
+
+export const scrollETH = createToken('scroll', 'ETH', 'nep245:v2_1.omni.hot.tg:534352_11111111111111111111', 18);
+export const scrollUSDT = createToken('scroll', 'USDT', 'nep245:v2_1.omni.hot.tg:534352_4RG3Q2wFsMQmd45m5m89RjsLfupA', 6, '0xf55bec9cafdbe8730f096aa55dad6d22d44099df');
+
+// ============================================================================
 // OPTIMISM TOKENS
 // ============================================================================
 
@@ -311,6 +388,8 @@ export const aptosAPT = createToken('aptos', 'APT', 'nep141:aptos.omft.near', 8)
 export const starknetSTRK = createToken('starknet', 'STRK', 'nep141:starknet.omft.near', 18);
 export const berachainBERA = createToken('bera', 'BERA', 'nep141:bera.omft.near', 18);
 export const zcashZEC = createToken('zec', 'ZEC', 'nep141:zec.omft.near', 8);
+export const stellarXLM = createToken('stellar', 'XLM', 'nep245:v2_1.omni.hot.tg:1100_111bzQBB5v7AhLyPMDwS8uJgQV24KaAPXtwyVWu2KXbbfQU6NXRCz', 7);
+export const stellarUSDC = createToken('stellar', 'USDC', 'nep245:v2_1.omni.hot.tg:1100_111bzQBB65GxAPAVoxqmMcgYo5oS3txhqs1Uh1cgahKQUeTUq1TJu', 7, 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN');
 
 // NEAR tokens
 export const nearNEAR = createToken('near', 'wNEAR', 'nep141:wrap.near', 24, 'wrap.near', {
@@ -348,6 +427,12 @@ export const CHAINS: Record<ChainId, Chain> = {
         name: 'Base',
         icon: CHAIN_ICONS.base,
         tokens: [baseETH, baseUSDC, baseCbBTC, baseBRETT],
+    },
+    scroll: {
+        id: 'scroll',
+        name: 'Scroll',
+        icon: CHAIN_ICONS.scroll,
+        tokens: [scrollETH, scrollUSDT],
     },
     op: {
         id: 'op',
@@ -473,7 +558,7 @@ export const CHAINS: Record<ChainId, Chain> = {
         id: 'stellar',
         name: 'Stellar',
         icon: CHAIN_ICONS.stellar,
-        tokens: [],
+        tokens: [stellarXLM, stellarUSDC],
     },
 };
 

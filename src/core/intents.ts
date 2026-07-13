@@ -5,7 +5,7 @@
  * All 1Click SDK logic lives server-side — the SDK just fetches.
  */
 
-import type { Token } from './tokens';
+import { needsMemoDeposit, type Token } from './tokens';
 import { getUniportConfig } from './config';
 
 // ============================================================================
@@ -237,6 +237,33 @@ export function generateDeadline(hoursFromNow = 1): string {
     return deadline.toISOString();
 }
 
+/**
+ * Round a human-readable amount string to a fixed number of significant
+ * digits, for display only — never use this for values sent on-chain.
+ *
+ * Intents routing (e.g. an EXACT_INPUT quote into an 18-decimal token) can
+ * produce amounts like "0.002703957684923543", which are exact but not
+ * readable. This trims them to something a payer can actually glance at
+ * (e.g. "0.0027040") while leaving the underlying quote data untouched.
+ */
+export function formatDisplayAmount(
+    amount: string | undefined,
+    significantDigits = 6
+): string {
+    if (!amount) return amount ?? '';
+    const num = Number(amount);
+    // Non-numeric, zero, or extreme magnitudes: show as-is rather than risk
+    // a misleading rounding (e.g. scientific notation for tiny amounts).
+    if (!Number.isFinite(num) || num === 0) return amount;
+    const abs = Math.abs(num);
+    if (abs < 1e-6 || abs >= 1e21) return amount;
+
+    return new Intl.NumberFormat('en-US', {
+        maximumSignificantDigits: significantDigits,
+        useGrouping: false,
+    }).format(num);
+}
+
 // ============================================================================
 // CORE SERVICE FUNCTIONS
 // ============================================================================
@@ -278,6 +305,7 @@ export async function getQuote(options: QuoteOptions): Promise<QuoteResult> {
                 dry,
                 swapType,
                 slippageTolerance,
+                depositMode: needsMemoDeposit(originToken.chain) ? 'MEMO' : undefined,
                 originAsset: originToken.assetId,
                 destinationAsset: destinationToken.assetId,
                 amount: amountInSmallestUnits,

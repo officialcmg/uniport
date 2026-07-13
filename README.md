@@ -46,6 +46,8 @@ The SDK uses Uniport's hosted backend. No API key or backend URL is required for
 
 If `refundAddress` is omitted, the payer can enter it inside the modal. The refund address is on the source chain the payer sends from.
 
+**EVM source chains only:** if the payer leaves the refund address blank, it defaults to Uniport's own address (resolved from `uniport.eth`, with a hardcoded fallback if resolution fails) rather than blocking the payment. This exists because the underlying 1Click API currently requires an explicit refund address — it cannot yet auto-refund to the depositing wallet. On non-EVM chains (Sui, Solana, Bitcoin, etc.) a refund address is still required from the payer, since there is no Uniport-controlled address on those chains to fall back to.
+
 ## Supported Token Naming
 
 Use the canonical token names below as `destinationToken`. Examples:
@@ -89,6 +91,8 @@ Legacy short aliases such as `arbUSDC` and `ethUSDC` are still accepted for back
 | Base | `baseUSDC` | USDC |
 | Base | `baseCbBTC` | cbBTC |
 | Base | `baseBRETT` | BRETT |
+| Scroll | `scrollETH` | ETH |
+| Scroll | `scrollUSDT` | USDT |
 | Optimism | `optimismETH` | ETH |
 | Optimism | `optimismUSDC` | USDC |
 | Optimism | `optimismUSDT` | USDT |
@@ -118,6 +122,36 @@ Legacy short aliases such as `arbUSDC` and `ethUSDC` are still accepted for back
 | Starknet | `starknetSTRK` | STRK |
 | Berachain | `berachainBERA` | BERA |
 | Zcash | `zcashZEC` | ZEC |
+| Stellar | `stellarXLM` | XLM |
+| Stellar | `stellarUSDC` | USDC |
+
+## Display amounts
+
+Cross-chain quotes routinely land on odd decimals — e.g. paying exactly 5 USDC
+may quote as `0.002703957684923543 ETH` on the destination side. The built-in
+`UniportModal` rounds all displayed estimates to 6 significant digits via
+`formatDisplayAmount` so payers see something readable (e.g. `0.0027040`).
+This is display-only: the actual quote, deposit amount, and settlement values
+are never altered — only the text shown in the UI is rounded.
+
+## Memo-required chains
+
+Some chains (currently: Stellar) require a memo alongside the deposit address
+— sending funds without it can make the deposit unrecoverable. `UniportModal`
+automatically requests the correct deposit mode for these chains and displays
+the memo prominently, with its own copy button, right next to the deposit
+address. `needsMemoDeposit(chain)` is exported if you need this in custom UI.
+
+Note: the underlying 1Click API's own documentation suggests TON and XRP may
+also need this, but that isn't the case for the chains actively supported
+today (verified directly against the live API) — only Stellar currently
+requires it. If this changes, `CHAINS_REQUIRING_MEMO` in `core/tokens.ts` is
+the single place to update.
+
+Stellar also has a chain-specific quirk worth knowing: non-native assets
+(e.g. Stellar USDC) require the receiving address to have an established
+trustline for that asset, or funds cannot be delivered. `UniportModal` warns
+about this when a refund address is entered for a non-XLM Stellar token.
 
 ## Core Exports
 
@@ -129,6 +163,11 @@ The package exports:
 - `getQuote`
 - `submitDepositTx`
 - `getExecutionStatus`
+- `getExplorerTxUrl` — block-explorer transaction URL for a given chain
+- `isEvmChain` — whether a `ChainId` is EVM-compatible
+- `resolveEnsName` — resolve any `.eth` name via the ENSIdeas API
+- `formatDisplayAmount` — rounds a human-readable amount to 6 significant digits for UI display only (never use the result for on-chain amounts)
+- `needsMemoDeposit` — whether a `ChainId` requires a memo alongside its deposit address
 - token constants such as `arbitrumUSDC`, `ethereumUSDC`, and `solanaSOL`
 
 ## Errors
