@@ -404,11 +404,11 @@ export const nearUSDT = createToken('near', 'USDT', 'nep141:usdt.tether-token.ne
 // ============================================================================
 
 export const CHAINS: Record<ChainId, Chain> = {
-    sui: {
-        id: 'sui',
-        name: 'Sui',
-        icon: CHAIN_ICONS.sui,
-        tokens: [suiSUI, suiUSDC],
+    stellar: {
+        id: 'stellar',
+        name: 'Stellar',
+        icon: CHAIN_ICONS.stellar,
+        tokens: [stellarXLM, stellarUSDC],
     },
     eth: {
         id: 'eth',
@@ -428,11 +428,11 @@ export const CHAINS: Record<ChainId, Chain> = {
         icon: CHAIN_ICONS.base,
         tokens: [baseETH, baseUSDC, baseCbBTC, baseBRETT],
     },
-    scroll: {
-        id: 'scroll',
-        name: 'Scroll',
-        icon: CHAIN_ICONS.scroll,
-        tokens: [scrollETH, scrollUSDT],
+    sui: {
+        id: 'sui',
+        name: 'Sui',
+        icon: CHAIN_ICONS.sui,
+        tokens: [suiSUI, suiUSDC],
     },
     op: {
         id: 'op',
@@ -554,11 +554,11 @@ export const CHAINS: Record<ChainId, Chain> = {
         icon: CHAIN_ICONS.monad,
         tokens: [],
     },
-    stellar: {
-        id: 'stellar',
-        name: 'Stellar',
-        icon: CHAIN_ICONS.stellar,
-        tokens: [stellarXLM, stellarUSDC],
+    scroll: {
+        id: 'scroll',
+        name: 'Scroll',
+        icon: CHAIN_ICONS.scroll,
+        tokens: [scrollETH, scrollUSDT],
     },
 };
 
