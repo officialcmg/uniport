@@ -4,7 +4,7 @@
  * Not exhaustive by design — this hits the real hosted backend (rate-limited
  * to 100 req/min) so it samples a representative cross-section instead of
  * every possible pair: major-chain USDC routes, a couple of native-token
- * routes, and the newly-added Scroll chain. All quotes are dry-run (no
+ * routes, Scroll, and the chains added in 0.0.9. All quotes are dry-run (no
  * deposit address generated, no funds moved).
  *
  * Run with: npx tsx scripts/check-prod-quotes.ts
@@ -21,6 +21,14 @@ import {
     scrollETH,
     solanaSOL,
     suiSUI,
+    gnosisUSDC,
+    hyperliquidUSDC,
+    plasmaUSDT0,
+    monadUSDC,
+    robinhoodUSDG,
+    xlayerUSDC,
+    dashDASH,
+    adiADI,
     type Token,
 } from '../src/core/tokens';
 import { toSmallestUnits } from '../src/core/intents';
@@ -41,21 +49,33 @@ const PAIRS: [Token, Token, string][] = [
     [scrollUSDT, arbitrumUSDC, '5'],
     [scrollETH, baseUSDC, '0.01'],
     [arbitrumUSDC, scrollUSDT, '5'],
+    [gnosisUSDC, arbitrumUSDC, '5'],
+    [arbitrumUSDC, hyperliquidUSDC, '5'],
+    [hyperliquidUSDC, baseUSDC, '5'],
+    [plasmaUSDT0, baseUSDC, '5'],
+    [monadUSDC, arbitrumUSDC, '5'],
+    [arbitrumUSDC, robinhoodUSDG, '5'],
+    [xlayerUSDC, arbitrumUSDC, '5'],
+    [dashDASH, arbitrumUSDC, '0.2'],
+    [adiADI, baseUSDC, '1'],
 ];
 
 const DUMMY_EVM = '0x2527D02599Ba641c19FEa793cD0F167589a0f10D';
 const DUMMY_SUI = '0xa6f2d3ed71e4cce768fc27bade39dfb1ed18e6ad4c78eeca1f5c31a8fe7c6c89';
 const DUMMY_SOL = 'DYw8jCTfwHNRJhhmFcbXvVDTqWMEVFBX6ZKUmG5CNSKK';
+const DUMMY_DASH = 'Xm4VPq5P2xyHE3ufF3RC4jHe6sLjNBhMQW';
 
 function refundForChain(chain: string): string {
     if (chain === 'sui') return DUMMY_SUI;
     if (chain === 'sol') return DUMMY_SOL;
+    if (chain === 'dash') return DUMMY_DASH;
     return DUMMY_EVM;
 }
 
 function recipientForChain(chain: string): string {
     if (chain === 'sui') return DUMMY_SUI;
     if (chain === 'sol') return DUMMY_SOL;
+    if (chain === 'dash') return DUMMY_DASH;
     return DUMMY_EVM;
 }
 

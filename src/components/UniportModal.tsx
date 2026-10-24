@@ -6,7 +6,7 @@ import React, { useEffect, useCallback, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { useUniportPayment } from '../hooks/useUniportPayment';
-import { CHAINS, getExplorerTxUrl, isEvmChain } from '../core/tokens';
+import { CHAINS, getExplorerTxUrl, isEvmChain, type ChainId } from '../core/tokens';
 import { UNIPORT_ENS_NAME } from '../core/ens';
 import { formatDisplayAmount } from '../core/intents';
 import type { UniportModalProps } from '../types';
@@ -861,6 +861,10 @@ export function UniportModal({
 
     // ── Success step ──────────────────────────────────────────────────────────
 
+    // Prefer the explorer link 1Click returns; fall back to our own per-chain table.
+    const txUrl = (reported: string | null | undefined, chain: ChainId | undefined, hash: string) =>
+        reported?.startsWith('https://') ? reported : chain ? getExplorerTxUrl(chain, hash) : undefined;
+
     // Link to the chain's block explorer; plain text if no explorer is mapped.
     const renderTxHash = (hash: string, url: string | undefined) =>
         url ? (
@@ -917,9 +921,7 @@ export function UniportModal({
                                 <p style={{ color: t.textMuted, fontSize: '11px', margin: '0 0 3px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                     Source TX · {payment.selectedChain?.name}
                                 </p>
-                                {renderTxHash(hash, payment.selectedChain
-                                    ? getExplorerTxUrl(payment.selectedChain.id, hash)
-                                    : undefined)}
+                                {renderTxHash(hash, txUrl(payment.status?.originTxExplorerUrls?.[i], payment.selectedChain?.id, hash))}
                             </div>
                         ))}
                         {payment.status?.destinationTxHashes?.map((hash, i) => (
@@ -927,7 +929,7 @@ export function UniportModal({
                                 <p style={{ color: t.textMuted, fontSize: '11px', margin: '0 0 3px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                     Destination TX · {CHAINS[payment.destinationToken.chain].name}
                                 </p>
-                                {renderTxHash(hash, getExplorerTxUrl(payment.destinationToken.chain, hash))}
+                                {renderTxHash(hash, txUrl(payment.status?.destinationTxExplorerUrls?.[i], payment.destinationToken.chain, hash))}
                             </div>
                         ))}
                         {!payment.status?.originTxHashes?.length && !payment.status?.destinationTxHashes?.length && (

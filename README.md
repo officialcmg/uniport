@@ -63,8 +63,8 @@ Legacy short aliases such as `arbUSDC` and `ethUSDC` are still accepted for back
 
 | Chain | Token Name | Symbol |
 |-------|------------|--------|
-| Sui | `suiSUI` | SUI |
-| Sui | `suiUSDC` | USDC |
+| Stellar | `stellarXLM` | XLM |
+| Stellar | `stellarUSDC` | USDC |
 | Ethereum | `ethereumETH` | ETH |
 | Ethereum | `ethereumUSDC` | USDC |
 | Ethereum | `ethereumUSDT` | USDT |
@@ -77,28 +77,26 @@ Legacy short aliases such as `arbUSDC` and `ethUSDC` are still accepted for back
 | Ethereum | `ethereumPEPE` | PEPE |
 | Ethereum | `ethereumTURBO` | TURBO |
 | Ethereum | `ethereumSAFE` | SAFE |
-| Solana | `solanaSOL` | SOL |
-| Solana | `solanaUSDC` | USDC |
-| Solana | `solanaUSDT` | USDT |
-| Solana | `solanaTRUMP` | TRUMP |
-| Solana | `solanaWIF` | $WIF |
-| Solana | `solanaMELANIA` | MELANIA |
-| Bitcoin | `bitcoinBTC` | BTC |
 | Arbitrum | `arbitrumETH` | ETH |
 | Arbitrum | `arbitrumUSDC` | USDC |
-| Arbitrum | `arbitrumUSDT` | USDT |
+| Arbitrum | `arbitrumUSDT` | USDT0 |
 | Arbitrum | `arbitrumARB` | ARB |
 | Arbitrum | `arbitrumGMX` | GMX |
 | Base | `baseETH` | ETH |
 | Base | `baseUSDC` | USDC |
 | Base | `baseCbBTC` | cbBTC |
 | Base | `baseBRETT` | BRETT |
-| Scroll | `scrollETH` | ETH |
-| Scroll | `scrollUSDT` | USDT |
+| Sui | `suiSUI` | SUI |
+| Sui | `suiUSDC` | USDC |
 | Optimism | `optimismETH` | ETH |
 | Optimism | `optimismUSDC` | USDC |
 | Optimism | `optimismUSDT` | USDT |
 | Optimism | `optimismOP` | OP |
+| Solana | `solanaSOL` | SOL |
+| Solana | `solanaUSDC` | USDC |
+| Solana | `solanaUSDT` | USDT |
+| Solana | `solanaWIF` | $WIF |
+| Bitcoin | `bitcoinBTC` | BTC |
 | Polygon | `polygonPOL` | POL |
 | Polygon | `polygonUSDC` | USDC |
 | Polygon | `polygonUSDT` | USDT |
@@ -108,7 +106,7 @@ Legacy short aliases such as `arbUSDC` and `ethUSDC` are still accepted for back
 | BNB Chain | `bscBNB` | BNB |
 | BNB Chain | `bscUSDC` | USDC |
 | BNB Chain | `bscUSDT` | USDT |
-| TON | `tonTON` | TON |
+| TON | `tonTON` | GRAM |
 | TON | `tonUSDT` | USDT |
 | Tron | `tronTRX` | TRX |
 | Tron | `tronUSDT` | USDT |
@@ -124,8 +122,29 @@ Legacy short aliases such as `arbUSDC` and `ethUSDC` are still accepted for back
 | Starknet | `starknetSTRK` | STRK |
 | Berachain | `berachainBERA` | BERA |
 | Zcash | `zcashZEC` | ZEC |
-| Stellar | `stellarXLM` | XLM |
-| Stellar | `stellarUSDC` | USDC |
+| Gnosis | `gnosisUSDC` | USDC |
+| Gnosis | `gnosisUSDT` | USDT |
+| Gnosis | `gnosisXDAI` | xDAI |
+| Gnosis | `gnosisEURe` | EURe |
+| Gnosis | `gnosisGNO` | GNO |
+| Gnosis | `gnosisCOW` | COW |
+| Gnosis | `gnosisWETH` | WETH |
+| Monad | `monadMON` | MON |
+| Monad | `monadUSDC` | USDC |
+| Monad | `monadUSDT0` | USDT0 |
+| Scroll | `scrollETH` | ETH |
+| Scroll | `scrollUSDT` | USDT |
+| Hyperliquid | `hyperliquidUSDC` | USDC |
+| Hyperliquid | `hyperliquidNEAR` | wNEAR |
+| Plasma | `plasmaUSDT0` | USDT0 |
+| Plasma | `plasmaXPL` | XPL |
+| Robinhood Chain | `robinhoodETH` | ETH |
+| Robinhood Chain | `robinhoodUSDG` | USDG |
+| Robinhood Chain | `robinhoodCASHCAT` | CASHCAT |
+| X Layer | `xlayerUSDC` | USDC |
+| X Layer | `xlayerUSDT0` | USDT0 |
+| Dash | `dashDASH` | DASH |
+| ADI Chain | `adiADI` | ADI |
 
 ## Display amounts
 

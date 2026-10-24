@@ -16,18 +16,24 @@ export const TOKEN_ICONS = {
     // Stablecoins
     USDC: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png',
     USDT: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xdAC17F958D2ee523a2206206994597C13D831ec7/logo.png',
-    DAI: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x6B175474E89094C44Da98b954EedeEC495271d0F/logo.png',
+    DAI: 'https://coin-images.coingecko.com/coins/images/9956/large/Badge_Dai.png?1696509996',
+    USDT0: 'https://coin-images.coingecko.com/coins/images/53705/large/usdt0.jpg?1737086183',
+    USDG: 'https://coin-images.coingecko.com/coins/images/51281/large/GDN_USDG_Token_200x200.png?1730484111',
+    xDAI: 'https://coin-images.coingecko.com/coins/images/11062/large/Identity-Primary-DarkBG.png?1696511004',
+    EURe: 'https://coin-images.coingecko.com/coins/images/54303/large/eure.jpg?1739167959',
 
     // Major tokens
     ETH: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png',
     WETH: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/logo.png',
     BTC: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/bitcoin/info/logo.png',
     WBTC: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599/logo.png',
+    cbBTC: 'https://coin-images.coingecko.com/coins/images/40143/large/cbbtc.webp?1726136727',
 
     // L1s & L2s
     SUI: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/sui/info/logo.png',
     SOL: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/info/logo.png',
     NEAR: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/near/info/logo.png',
+    wNEAR: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/near/info/logo.png',
     ARB: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/arbitrum/info/logo.png',
     OP: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/optimism/info/logo.png',
     POL: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/polygon/info/logo.png',
@@ -42,12 +48,19 @@ export const TOKEN_ICONS = {
     LTC: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/litecoin/info/logo.png',
     BCH: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/bitcoincash/info/logo.png',
     TON: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ton/info/logo.png',
+    GRAM: 'https://coin-images.coingecko.com/coins/images/17980/large/Gram_Circular_Badge.png?1781524778',
     TRX: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/tron/info/logo.png',
     XLM: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/stellar/info/logo.png',
     APT: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/aptos/info/logo.png',
+    DASH: 'https://coin-images.coingecko.com/coins/images/19/large/dash-logo.png?1696501423',
+    XPL: 'https://coin-images.coingecko.com/coins/images/66489/large/Plasma-symbol-green-1.png?1755142558',
+    ADI: 'https://coin-images.coingecko.com/coins/images/68846/large/ADI_Token-min.png?1765296433',
 
     // DeFi & Others
-    AAVE: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x7Fc66500c84A76Ad7e9c93437BFc5Ac33E2DDaE9/logo.png',
+    AAVE: 'https://coin-images.coingecko.com/coins/images/12645/large/aave-token-round.png?1720472354',
+    GMX: 'https://coin-images.coingecko.com/coins/images/18323/large/arbit.png?1696517814',
+    SAFE: 'https://coin-images.coingecko.com/coins/images/27032/large/Artboard_1_copy_8circle-1.png?1696526084',
+    COW: 'https://coin-images.coingecko.com/coins/images/24384/large/CoW-token_logo.png?1719524382',
     UNI: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984/logo.png',
     LINK: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x514910771AF9Ca656af840dff83E8264EcF986CA/logo.png',
     SHIB: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE/logo.png',
@@ -55,13 +68,13 @@ export const TOKEN_ICONS = {
 
     // Ecosystem tokens
     STRK: 'https://coin-images.coingecko.com/coins/images/26433/large/starknet.png',
-    BERA: 'https://s2.coinmarketcap.com/static/img/coins/64x64/31645.png',
-    GNO: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x6810e776880C02933D47DB1b9fc05908e5386b96/logo.png',
-    MON: 'https://s2.coinmarketcap.com/static/img/coins/64x64/33868.png',
+    BERA: 'https://coin-images.coingecko.com/coins/images/25235/large/BERA.png?1738822008',
+    GNO: 'https://coin-images.coingecko.com/coins/images/662/large/logo_square_simple_300px.png?1696501854',
+    MON: 'https://coin-images.coingecko.com/coins/images/38927/large/mon.png?1766029057',
     ZEC: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/zcash/info/logo.png',
 
     // Meme coins
-    TRUMP: 'https://s2.coinmarketcap.com/static/img/coins/64x64/35336.png',
+    CASHCAT: 'https://coin-images.coingecko.com/coins/images/102174280/large/cashcat-logo.jpg?1782922765',
     WIF: 'https://s2.coinmarketcap.com/static/img/coins/64x64/28752.png',
     BRETT: 'https://s2.coinmarketcap.com/static/img/coins/64x64/29743.png',
     TURBO: 'https://s2.coinmarketcap.com/static/img/coins/64x64/24911.png',
@@ -93,14 +106,20 @@ export const CHAIN_ICONS = {
     aptos: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/aptos/info/logo.png',
     gnosis: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/xdai/info/logo.png',
     starknet: 'https://coin-images.coingecko.com/coins/images/26433/large/starknet.png',
-    bera: 'https://s2.coinmarketcap.com/static/img/coins/64x64/31645.png',
-    monad: 'https://s2.coinmarketcap.com/static/img/coins/64x64/33868.png',
+    bera: 'https://coin-images.coingecko.com/coins/images/25235/large/BERA.png?1738822008',
+    monad: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/monad/info/logo.png',
     doge: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/doge/info/logo.png',
     ltc: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/litecoin/info/logo.png',
     bch: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/bitcoincash/info/logo.png',
     xrp: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ripple/info/logo.png',
     zec: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/zcash/info/logo.png',
     scroll: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/scroll/info/logo.png',
+    hypercore: 'https://coin-images.coingecko.com/asset_platforms/images/243/large/hyperliquid.png?1713924434',
+    plasma: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/plasma/info/logo.png',
+    hood: 'https://coin-images.coingecko.com/asset_platforms/images/102132299/large/robinhood.png?1782921203',
+    xlayer: 'https://coin-images.coingecko.com/asset_platforms/images/238/large/x_logo.jpeg?1713243242',
+    dash: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/dash/info/logo.png',
+    adi: 'https://coin-images.coingecko.com/asset_platforms/images/102132311/large/adi-chain.png?1788338099',
 } as const;
 
 // ============================================================================
@@ -109,9 +128,14 @@ export const CHAIN_ICONS = {
 
 export type ChainId = keyof typeof CHAIN_ICONS;
 
-/** Chains that use EVM-style addresses (0x...), as opposed to chain-specific formats. */
+/**
+ * Chains that use EVM-style addresses (0x...), as opposed to chain-specific formats.
+ * HyperCore isn't an EVM, but its accounts are the same 0x keys, so the default
+ * refund address (an EOA) is valid there too.
+ */
 export const EVM_CHAINS: ChainId[] = [
     'eth', 'arb', 'base', 'op', 'pol', 'avax', 'bsc', 'gnosis', 'bera', 'monad', 'scroll',
+    'plasma', 'hood', 'xlayer', 'adi', 'hypercore',
 ];
 
 export function isEvmChain(chain: ChainId): boolean {
@@ -168,6 +192,12 @@ const EXPLORER_TX_URLS: Record<ChainId, (hash: string) => string> = {
     xrp: (h) => `https://xrpscan.com/tx/${h}`,
     zec: (h) => `https://blockchair.com/zcash/transaction/${h}`,
     scroll: (h) => `https://scrollscan.com/tx/${h}`,
+    hypercore: (h) => `https://app.hyperliquid.xyz/explorer/tx/${h}`,
+    plasma: (h) => `https://plasmascan.to/tx/${h}`,
+    hood: (h) => `https://robinhoodchain.blockscout.com/tx/${h}`,
+    xlayer: (h) => `https://www.oklink.com/x-layer/tx/${h}`,
+    dash: (h) => `https://insight.dash.org/insight/tx/${h}`,
+    adi: (h) => `https://explorer.adifoundation.ai/tx/${h}`,
 };
 
 /** Build a block-explorer URL for a transaction hash on a given chain. */
@@ -225,7 +255,9 @@ function createToken(
     const canonicalPrefix = TOKEN_NAME_PREFIXES[chain] || chain;
     const legacyName = `${chain}${normalizedSymbol}`;
     const name = options?.name || `${canonicalPrefix}${normalizedSymbol}`;
-    const icon = TOKEN_ICONS[symbol as keyof typeof TOKEN_ICONS] || TOKEN_ICONS.DEFAULT;
+    const icon = TOKEN_ICONS[symbol as keyof typeof TOKEN_ICONS]
+        || TOKEN_ICONS[normalizedSymbol as keyof typeof TOKEN_ICONS]
+        || TOKEN_ICONS.DEFAULT;
     const chainIcon = CHAIN_ICONS[chain];
     const aliases = new Set(options?.aliases || []);
 
@@ -259,6 +291,8 @@ const TOKEN_NAME_PREFIXES: Partial<Record<ChainId, string>> = {
     bch: 'bitcoinCash',
     bera: 'berachain',
     zec: 'zcash',
+    hypercore: 'hyperliquid',
+    hood: 'robinhood',
 };
 
 // ============================================================================
@@ -291,7 +325,11 @@ export const ethereumSAFE = createToken('eth', 'SAFE', 'nep141:eth-0x5afe3855358
 
 export const arbitrumETH = createToken('arb', 'ETH', 'nep141:arb.omft.near', 18);
 export const arbitrumUSDC = createToken('arb', 'USDC', 'nep141:arb-0xaf88d065e77c8cc2239327c5edb3a432268e5831.omft.near', 6, '0xaf88d065e77c8cc2239327c5edb3a432268e5831');
-export const arbitrumUSDT = createToken('arb', 'USDT', 'nep141:arb-0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9.omft.near', 6, '0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9');
+// Arbitrum's USDT contract migrated to USDT0; the name stays arbitrumUSDT for existing integrations.
+export const arbitrumUSDT = createToken('arb', 'USDT0', 'nep141:arb-0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9.omft.near', 6, '0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9', {
+    name: 'arbitrumUSDT',
+    aliases: ['arbUSDT', 'arbitrumUSDT0'],
+});
 export const arbitrumARB = createToken('arb', 'ARB', 'nep141:arb-0x912ce59144191c1204e64559fe8253a0e49e6548.omft.near', 18, '0x912ce59144191c1204e64559fe8253a0e49e6548');
 export const arbitrumGMX = createToken('arb', 'GMX', 'nep141:arb-0xfc5a1a6eb076a2c7ad06ed22c90d7e710e35ad0a.omft.near', 18, '0xfc5a1a6eb076a2c7ad06ed22c90d7e710e35ad0a');
 
@@ -327,9 +365,7 @@ export const optimismOP = createToken('op', 'OP', 'nep245:v2_1.omni.hot.tg:10_vL
 export const solanaSOL = createToken('sol', 'SOL', 'nep141:sol.omft.near', 9);
 export const solanaUSDC = createToken('sol', 'USDC', 'nep141:sol-5ce3bf3a31af18be40ba30f721101b4341690186.omft.near', 6, 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
 export const solanaUSDT = createToken('sol', 'USDT', 'nep141:sol-c800a4bd850783ccb82c2b2c7e84175443606352.omft.near', 6, 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB');
-export const solanaTRUMP = createToken('sol', 'TRUMP', 'nep141:sol-c58e6539c2f2e097c251f8edf11f9c03e581f8d4.omft.near', 6, '6p6xgHyF7AeE6TZkSmFsko444wqoP15icUSqi2jfGiPN');
 export const solanaWIF = createToken('sol', '$WIF', 'nep141:sol-b9c68f94ec8fd160137af8cdfe5e61cd68e2afba.omft.near', 6, 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm');
-export const solanaMELANIA = createToken('sol', 'MELANIA', 'nep141:sol-d600e625449a4d9380eaf5e3265e54c90d34e260.omft.near', 6, 'FUAfBo2jgks6gB4Z4LfZkqSZgzNucisEHqnNebaRxM1P');
 
 // ============================================================================
 // BITCOIN
@@ -365,7 +401,11 @@ export const bscUSDT = createToken('bsc', 'USDT', 'nep245:v2_1.omni.hot.tg:56_2C
 // TON TOKENS
 // ============================================================================
 
-export const tonTON = createToken('ton', 'TON', 'nep245:v2_1.omni.hot.tg:1117_', 9);
+// Toncoin rebranded to Gram (GRAM); the name stays tonTON for existing integrations.
+export const tonTON = createToken('ton', 'GRAM', 'nep245:v2_1.omni.hot.tg:1117_', 9, undefined, {
+    name: 'tonTON',
+    aliases: ['tonGRAM'],
+});
 export const tonUSDT = createToken('ton', 'USDT', 'nep245:v2_1.omni.hot.tg:1117_3tsdfyziyc7EJbP2aULWSKU4toBaAcN4FdTgfm5W1mC4ouR', 6, 'EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs');
 
 // ============================================================================
@@ -398,6 +438,65 @@ export const nearNEAR = createToken('near', 'wNEAR', 'nep141:wrap.near', 24, 'wr
 });
 export const nearUSDC = createToken('near', 'USDC', 'nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1', 6, '17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1');
 export const nearUSDT = createToken('near', 'USDT', 'nep141:usdt.tether-token.near', 6, 'usdt.tether-token.near');
+
+// ============================================================================
+// GNOSIS TOKENS
+// ============================================================================
+
+export const gnosisUSDC = createToken('gnosis', 'USDC', 'nep141:gnosis-0x2a22f9c3b484c3629090feed35f17ff8f88f76f0.omft.near', 6, '0x2a22f9c3b484c3629090feed35f17ff8f88f76f0');
+export const gnosisUSDT = createToken('gnosis', 'USDT', 'nep141:gnosis-0x4ecaba5870353805a9f068101a40e0f32ed605c6.omft.near', 6, '0x4ecaba5870353805a9f068101a40e0f32ed605c6');
+export const gnosisXDAI = createToken('gnosis', 'xDAI', 'nep141:gnosis.omft.near', 18, undefined, { name: 'gnosisXDAI' });
+export const gnosisEURe = createToken('gnosis', 'EURe', 'nep141:gnosis-0x420ca0f9b9b604ce0fd9c18ef134c705e5fa3430.omft.near', 18, '0x420ca0f9b9b604ce0fd9c18ef134c705e5fa3430');
+export const gnosisGNO = createToken('gnosis', 'GNO', 'nep141:gnosis-0x9c58bacc331c9aa871afd802db6379a98e80cedb.omft.near', 18, '0x9c58bacc331c9aa871afd802db6379a98e80cedb');
+export const gnosisCOW = createToken('gnosis', 'COW', 'nep141:gnosis-0x177127622c4a00f3d409b75571e12cb3c8973d3c.omft.near', 18, '0x177127622c4a00f3d409b75571e12cb3c8973d3c');
+export const gnosisWETH = createToken('gnosis', 'WETH', 'nep141:gnosis-0x6a023ccd1ff6f2045c3309768ead9e68f978f6e1.omft.near', 18, '0x6a023ccd1ff6f2045c3309768ead9e68f978f6e1');
+
+// ============================================================================
+// HYPERLIQUID (HYPERCORE) TOKENS
+// ============================================================================
+
+export const hyperliquidUSDC = createToken('hypercore', 'USDC', '1cs_v1:hypercore:hip1:0x6d1e7cde53ba9467b783cb7c530ce054', 8, '0x6d1e7cde53ba9467b783cb7c530ce054');
+export const hyperliquidNEAR = createToken('hypercore', 'wNEAR', '1cs_v1:hypercore:hip1:0x20b8c9d2f022ffd2aea4f7962b7b1d8b', 8, '0x20b8c9d2f022ffd2aea4f7962b7b1d8b', {
+    name: 'hyperliquidNEAR',
+    aliases: ['hyperliquidwNEAR'],
+});
+
+// ============================================================================
+// PLASMA TOKENS
+// ============================================================================
+
+export const plasmaUSDT0 = createToken('plasma', 'USDT0', 'nep141:plasma-0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb.omft.near', 6, '0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb');
+export const plasmaXPL = createToken('plasma', 'XPL', 'nep141:plasma.omft.near', 18);
+
+// ============================================================================
+// MONAD TOKENS
+// ============================================================================
+
+export const monadMON = createToken('monad', 'MON', 'nep245:v2_1.omni.hot.tg:143_11111111111111111111', 18);
+export const monadUSDC = createToken('monad', 'USDC', 'nep245:v2_1.omni.hot.tg:143_2dmLwYWkCQKyTjeUPAsGJuiVLbFx', 6, '0x754704bc059f8c67012fed69bc8a327a5aafb603');
+export const monadUSDT0 = createToken('monad', 'USDT0', 'nep245:v2_1.omni.hot.tg:143_4EJiJxSALvGoTZbnc8K7Ft9533et', 6, '0xe7cd86e13ac4309349f30b3435a9d337750fc82d');
+
+// ============================================================================
+// ROBINHOOD CHAIN TOKENS
+// ============================================================================
+
+export const robinhoodETH = createToken('hood', 'ETH', 'nep141:hood.omft.near', 18);
+export const robinhoodUSDG = createToken('hood', 'USDG', 'nep141:hood-0x5fc5360d0400a0fd4f2af552add042d716f1d168.omft.near', 6, '0x5fc5360d0400a0fd4f2af552add042d716f1d168');
+export const robinhoodCASHCAT = createToken('hood', 'CASHCAT', 'nep141:hood-0x020bfc650a365f8bb26819deaabf3e21291018b4.omft.near', 18, '0x020bfc650a365f8bb26819deaabf3e21291018b4');
+
+// ============================================================================
+// X LAYER TOKENS
+// ============================================================================
+
+export const xlayerUSDC = createToken('xlayer', 'USDC', 'nep245:v2_1.omni.hot.tg:196_2dK9kLNR7Ekq7su8FxNGiUW3djTw', 6, '0x74b7f16337b8972027f6196a17a631ac6de26d22');
+export const xlayerUSDT0 = createToken('xlayer', 'USDT0', 'nep245:v2_1.omni.hot.tg:196_2fezDCvVYRsG8wrK6deJ2VRPiAS1', 6, '0x779ded0c9e1022225f8e0630b35a9b54be713736');
+
+// ============================================================================
+// DASH & ADI
+// ============================================================================
+
+export const dashDASH = createToken('dash', 'DASH', 'nep141:dash.omft.near', 8);
+export const adiADI = createToken('adi', 'ADI', 'nep245:v2_1.omni.hot.tg:36900_11111111111111111111', 18);
 
 // ============================================================================
 // CHAIN DEFINITIONS
@@ -444,7 +543,7 @@ export const CHAINS: Record<ChainId, Chain> = {
         id: 'sol',
         name: 'Solana',
         icon: CHAIN_ICONS.sol,
-        tokens: [solanaSOL, solanaUSDC, solanaUSDT, solanaTRUMP, solanaWIF, solanaMELANIA],
+        tokens: [solanaSOL, solanaUSDC, solanaUSDT, solanaWIF],
     },
     btc: {
         id: 'btc',
@@ -546,19 +645,55 @@ export const CHAINS: Record<ChainId, Chain> = {
         id: 'gnosis',
         name: 'Gnosis',
         icon: CHAIN_ICONS.gnosis,
-        tokens: [],
+        tokens: [gnosisUSDC, gnosisUSDT, gnosisXDAI, gnosisEURe, gnosisGNO, gnosisCOW, gnosisWETH],
     },
     monad: {
         id: 'monad',
         name: 'Monad',
         icon: CHAIN_ICONS.monad,
-        tokens: [],
+        tokens: [monadMON, monadUSDC, monadUSDT0],
     },
     scroll: {
         id: 'scroll',
         name: 'Scroll',
         icon: CHAIN_ICONS.scroll,
         tokens: [scrollETH, scrollUSDT],
+    },
+    hypercore: {
+        id: 'hypercore',
+        name: 'Hyperliquid',
+        icon: CHAIN_ICONS.hypercore,
+        tokens: [hyperliquidUSDC, hyperliquidNEAR],
+    },
+    plasma: {
+        id: 'plasma',
+        name: 'Plasma',
+        icon: CHAIN_ICONS.plasma,
+        tokens: [plasmaUSDT0, plasmaXPL],
+    },
+    hood: {
+        id: 'hood',
+        name: 'Robinhood Chain',
+        icon: CHAIN_ICONS.hood,
+        tokens: [robinhoodETH, robinhoodUSDG, robinhoodCASHCAT],
+    },
+    xlayer: {
+        id: 'xlayer',
+        name: 'X Layer',
+        icon: CHAIN_ICONS.xlayer,
+        tokens: [xlayerUSDC, xlayerUSDT0],
+    },
+    dash: {
+        id: 'dash',
+        name: 'Dash',
+        icon: CHAIN_ICONS.dash,
+        tokens: [dashDASH],
+    },
+    adi: {
+        id: 'adi',
+        name: 'ADI Chain',
+        icon: CHAIN_ICONS.adi,
+        tokens: [adiADI],
     },
 };
 
