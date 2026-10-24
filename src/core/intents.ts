@@ -61,12 +61,12 @@ export interface QuoteOptions {
     originToken: Token;
     /** Destination token (target chain) */
     destinationToken: Token;
-    /** Amount in human-readable format (e.g., "1.5" for 1.5 USDC) */
+    /** Human-readable input amount for EXACT_INPUT, output amount for EXACT_OUTPUT. */
     amount: string;
     /** Recipient address on destination chain */
     recipient: string;
     /** Refund address on origin chain (if swap fails) */
-    refundTo: string;
+    refundTo?: string;
     /** Slippage tolerance in basis points (100 = 1%) */
     slippageTolerance?: number;
     /** Swap type (default: EXACT_INPUT) */
@@ -166,6 +166,18 @@ export interface QuoteResult {
     memo?: string;
     /** Expected input amount (smallest units) */
     amountIn: string;
+    /** Expected input amount in human-readable units */
+    amountInFormatted: string;
+    /** Minimum accepted input amount (smallest units) */
+    minAmountIn?: string;
+    /** Friendly amount the payer should send (smallest units) */
+    paymentAmountIn: string;
+    /** Friendly amount the payer should send in human-readable units */
+    paymentAmountInFormatted: string;
+    /** Rounded surplus credited to Uniport Intents (smallest units) */
+    roundingRemainder: string;
+    /** Rounded surplus credited to Uniport Intents in human-readable units */
+    roundingRemainderFormatted: string;
     /** Expected output amount (smallest units) */
     amountOut: string;
     /** Human-readable output amount */
@@ -223,10 +235,47 @@ export function toSmallestUnits(amount: string, decimals: number): string {
  * Convert smallest units to human-readable amount
  */
 export function fromSmallestUnits(amount: string, decimals: number): string {
+    if (decimals === 0) return amount;
     const padded = amount.padStart(decimals + 1, '0');
     const whole = padded.slice(0, -decimals) || '0';
     const fraction = padded.slice(-decimals).replace(/0+$/, '');
     return fraction ? `${whole}.${fraction}` : whole;
+}
+
+/** Maximum extra input collected when making EXACT_OUTPUT amounts readable. */
+export const MAX_EXACT_OUTPUT_ROUNDING_BPS = 25;
+
+/**
+ * Round a smallest-unit amount upward to the shortest decimal representation
+ * that adds no more than MAX_EXACT_OUTPUT_ROUNDING_BPS (0.25%).
+ */
+export function roundUpInputAmount(
+    amount: string,
+    decimals: number,
+    maxIncreaseBps = MAX_EXACT_OUTPUT_ROUNDING_BPS
+): string {
+    if (
+        !/^[1-9]\d*$/.test(amount) ||
+        !Number.isInteger(decimals) ||
+        decimals < 0 ||
+        !Number.isInteger(maxIncreaseBps) ||
+        maxIncreaseBps < 0
+    ) {
+        return amount;
+    }
+
+    const value = BigInt(amount);
+    const maxBps = BigInt(maxIncreaseBps);
+
+    for (let displayDecimals = 0; displayDecimals <= decimals; displayDecimals++) {
+        const unit = 10n ** BigInt(decimals - displayDecimals);
+        const rounded = ((value + unit - 1n) / unit) * unit;
+        if ((rounded - value) * 10000n <= value * maxBps) {
+            return rounded.toString();
+        }
+    }
+
+    return amount;
 }
 
 /**
@@ -286,7 +335,12 @@ export async function getQuote(options: QuoteOptions): Promise<QuoteResult> {
         signal,
     } = options;
 
-    const amountInSmallestUnits = toSmallestUnits(amount, originToken.decimals);
+    const amountInSmallestUnits = toSmallestUnits(
+        amount,
+        swapType === 'EXACT_OUTPUT'
+            ? destinationToken.decimals
+            : originToken.decimals
+    );
 
     const { backendUrl, requestTimeoutMs } = getUniportConfig();
     const { signal: requestSignal, cleanup, didTimeout } = createTimeoutSignal(
@@ -344,11 +398,31 @@ export async function getQuote(options: QuoteOptions): Promise<QuoteResult> {
 
     const data = await response.json();
     const quote = data.quote;
+    const paymentAmountIn = swapType === 'EXACT_OUTPUT'
+        ? roundUpInputAmount(quote.amountIn, originToken.decimals)
+        : quote.amountIn;
+    const roundingRemainder = (
+        BigInt(paymentAmountIn) - BigInt(quote.amountIn)
+    ).toString();
 
     return {
         depositAddress: quote.depositAddress || '',
         memo: quote.depositMemo,
         amountIn: quote.amountIn,
+        amountInFormatted:
+            quote.amountInFormatted ||
+            fromSmallestUnits(quote.amountIn, originToken.decimals),
+        minAmountIn: quote.minAmountIn,
+        paymentAmountIn,
+        paymentAmountInFormatted: fromSmallestUnits(
+            paymentAmountIn,
+            originToken.decimals
+        ),
+        roundingRemainder,
+        roundingRemainderFormatted: fromSmallestUnits(
+            roundingRemainder,
+            originToken.decimals
+        ),
         amountOut: quote.amountOut,
         amountOutFormatted: quote.amountOutFormatted,
         amountOutUsd: quote.amountOutUsd,

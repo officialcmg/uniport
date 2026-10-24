@@ -48,7 +48,7 @@ export interface UniportModalProps {
     refundAddress?: string;
     /** Destination token name (e.g. 'suiUSDC', 'ethereumUSDC', 'baseETH') */
     destinationToken: string;
-    /** Amount to request */
+    /** Exact destination amount; omit to let the payer enter an input amount */
     amount?: string;
     /** Color theme */
     theme?: 'light' | 'dark';

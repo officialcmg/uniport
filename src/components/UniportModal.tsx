@@ -251,6 +251,10 @@ function formatPreviewError(error: Error): string {
 
     const normalized = error.message.toLowerCase();
 
+    if (normalized.includes('trustline')) {
+        return 'This Stellar recipient must enable the selected asset before it can receive funds.';
+    }
+
     if (normalized.includes('recipient is not valid')) {
         return 'Recipient address does not match the selected destination chain.';
     }
@@ -372,15 +376,17 @@ export function UniportModal({
     const isSuccess = paymentState === 'success';
     const isError   = paymentState === 'error';
     const isQuoting = paymentState === 'quoting';
-    const canSubmit = !!(
-        payment.selectedToken &&
-        payment.amount &&
-        payment.effectiveRefundAddress
-    );
+    const isExactOutput = initialAmount !== undefined;
     const canPreviewEstimate = !!(
         payment.selectedToken &&
         payment.amount &&
-        payment.effectiveRefundAddress
+        (isExactOutput || payment.effectiveRefundAddress)
+    );
+    const canSubmit = !!(
+        canPreviewEstimate &&
+        payment.previewQuote &&
+        !payment.previewError &&
+        !payment.isLoadingPreview
     );
     const showBack  = !isSuccess && !isError && (showQR || modalStep !== 'chain');
 
@@ -557,11 +563,13 @@ export function UniportModal({
                             autoFocus
                         />
                         <div style={{ fontSize: '14px', color: t.textMuted, marginTop: 8 }}>
-                            {tok?.symbol}
+                            {isExactOutput
+                                ? payment.destinationToken.symbol
+                                : tok?.symbol}
                         </div>
                     </div>
 
-                    <div style={{ marginBottom: '18px' }}>
+                    {!isExactOutput && <div style={{ marginBottom: '18px' }}>
                         <label
                             style={{
                                 display: 'block',
@@ -624,7 +632,7 @@ export function UniportModal({
                                 This refund address must already have a trustline for {tok?.symbol} on Stellar, or a refund cannot be delivered to it.
                             </p>
                         )}
-                    </div>
+                    </div>}
 
                     {/* Live preview */}
                     <div style={{
@@ -645,14 +653,20 @@ export function UniportModal({
                             !payment.isLoadingPreview &&
                             payment.previewQuote && (
                             <span style={{ fontSize: '15px', color: t.textSecondary }}>
-                                You will receive{' '}
+                                {isExactOutput ? 'You will send ' : 'You will receive '}
                                 <strong style={{ color: t.text }}>
-                                    {formatDisplayAmount(payment.previewQuote.amountOutFormatted)}{' '}
-                                    {payment.destinationToken.symbol}
+                                    {isExactOutput
+                                        ? payment.previewQuote.paymentAmountInFormatted
+                                        : formatDisplayAmount(payment.previewQuote.amountOutFormatted)}{' '}
+                                    {isExactOutput
+                                        ? tok?.symbol
+                                        : payment.destinationToken.symbol}
                                 </strong>{' '}
                                 on{' '}
                                 <strong style={{ color: t.text }}>
-                                    {formatChainLabel(payment.destinationToken.chain)}
+                                    {isExactOutput
+                                        ? ch?.name
+                                        : formatChainLabel(payment.destinationToken.chain)}
                                 </strong>
                             </span>
                         )}
@@ -674,13 +688,26 @@ export function UniportModal({
                     </div>
 
                     {/* Exact-amount warning */}
-                    {!!payment.amount && (
+                    {!!payment.amount && !isExactOutput && (
                         <div style={{ ...warningBox, marginBottom: '20px' }}>
                             <WarningTriangle color={t.warning} />
                             <p style={{ margin: 0, fontSize: '13px', color: t.warningText, lineHeight: 1.55 }}>
                                 You must send{' '}
                                 <strong>exactly {payment.amount} {tok?.symbol}</strong>{' '}
                                 on <strong>{ch?.name}</strong>. Sending a different amount or asset may result in loss of funds.
+                            </p>
+                        </div>
+                    )}
+
+                    {isExactOutput && payment.previewQuote && (
+                        <div style={{ ...warningBox, marginBottom: '20px' }}>
+                            <WarningTriangle color={t.warning} />
+                            <p style={{ margin: 0, fontSize: '13px', color: t.warningText, lineHeight: 1.55 }}>
+                                To receive <strong>exactly {payment.amount} {payment.destinationToken.symbol}</strong>,
+                                send <strong>{payment.previewQuote.paymentAmountInFormatted} {tok?.symbol}</strong> on <strong>{ch?.name}</strong>.
+                                {payment.previewQuote.roundingRemainder !== '0' && (
+                                    <> The rounded surplus is {payment.previewQuote.roundingRemainderFormatted} {tok?.symbol}.</>
+                                )}
                             </p>
                         </div>
                     )}
@@ -694,7 +721,7 @@ export function UniportModal({
                         }
                     </button>
 
-                    {!payment.effectiveRefundAddress && (
+                    {!isExactOutput && !payment.effectiveRefundAddress && (
                         <p style={{ textAlign: 'center', fontSize: '12px', color: t.error, margin: '10px 0 0' }}>
                             Enter a refund address on {ch?.name || 'the source chain'} to continue.
                         </p>
@@ -709,9 +736,10 @@ export function UniportModal({
     const renderPaymentStep = () => {
         const { quote } = payment;
         const isProcessing = paymentState === 'processing';
+        const sendAmount = quote?.paymentAmountInFormatted || payment.amount;
         return (
             <>
-                {renderHeader(`Send ${payment.amount} ${payment.selectedToken?.symbol ?? ''} on ${payment.selectedChain?.name ?? ''}`)}
+                {renderHeader(`Send ${sendAmount} ${payment.selectedToken?.symbol ?? ''} on ${payment.selectedChain?.name ?? ''}`)}
                 <div style={{ padding: '4px 20px 24px' }}>
                     {quote && (
                         <>
@@ -788,7 +816,7 @@ export function UniportModal({
                                 <WarningTriangle color={t.warning} />
                                 <p style={{ margin: 0, fontSize: '13px', color: t.warningText, lineHeight: 1.55 }}>
                                     Only send{' '}
-                                    <strong>{payment.amount} {payment.selectedToken?.symbol}</strong>{' '}
+                                    <strong>{sendAmount} {payment.selectedToken?.symbol}</strong>{' '}
                                     on <strong>{payment.selectedChain?.name}</strong> to this address
                                     {quote.memo && <> <strong>with the memo above</strong></>}. Other assets may be permanently lost
                                     {quote.memo && <>, and omitting the memo may make your deposit unrecoverable</>}.
@@ -800,7 +828,7 @@ export function UniportModal({
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                                     <span style={{ fontSize: '13px', color: t.textMuted }}>You'll receive</span>
                                     <span style={{ fontSize: '13px', fontWeight: 600, color: t.text }}>
-                                        ≈{formatDisplayAmount(quote.amountOutFormatted)} {payment.destinationToken.symbol}
+                                        {isExactOutput ? '' : '≈'}{formatDisplayAmount(quote.amountOutFormatted)} {payment.destinationToken.symbol}
                                     </span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -871,8 +899,8 @@ export function UniportModal({
                     Payment sent!
                 </h2>
                 <p style={{ margin: '0 0 24px', fontSize: '14px', color: t.textMuted, lineHeight: 1.6 }}>
-                    {payment.amount} {payment.selectedToken?.symbol}
-                    {' → '}≈{formatDisplayAmount(payment.quote?.amountOutFormatted)} {payment.destinationToken.symbol}
+                    {payment.quote?.paymentAmountInFormatted || payment.amount} {payment.selectedToken?.symbol}
+                    {' → '}{isExactOutput ? '' : '≈'}{formatDisplayAmount(payment.quote?.amountOutFormatted)} {payment.destinationToken.symbol}
                 </p>
                 <button onClick={() => setShowReceipt(p => !p)}
                     style={{

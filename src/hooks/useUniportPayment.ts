@@ -11,6 +11,7 @@ import {
     type QuoteResult,
     type StatusResult,
     type ExecutionStatus,
+    type SwapType,
 } from '../core/intents';
 import {
     getSupportedChains,
@@ -29,6 +30,7 @@ export interface UseUniportPaymentOptions {
     recipient: string;
     refundAddress?: string;
     destinationToken: string;
+    /** Exact destination amount; omit to let the payer enter an input amount. */
     amount?: string;
     onSuccess?: (result: { txHash: string; amount: string }) => void;
     onError?: (error: Error) => void;
@@ -72,6 +74,19 @@ export interface UseUniportPaymentReturn {
     copyToClipboard: (text: string) => Promise<boolean>;
 }
 
+function normalizeError(error: unknown, fallback: string): Error {
+    if (error instanceof Error) return error;
+    if (
+        typeof error === 'object' &&
+        error !== null &&
+        'message' in error &&
+        typeof error.message === 'string'
+    ) {
+        return new Error(error.message);
+    }
+    return new Error(fallback);
+}
+
 export function useUniportPayment(
     options: UseUniportPaymentOptions
 ): UseUniportPaymentReturn {
@@ -83,6 +98,8 @@ export function useUniportPayment(
         onSuccess,
         onError,
     } = options;
+    const swapType: Extract<SwapType, 'EXACT_INPUT' | 'EXACT_OUTPUT'> =
+        initialAmount === undefined ? 'EXACT_INPUT' : 'EXACT_OUTPUT';
 
     // Get destination token by name string
     const destToken = getToken(destinationToken);
@@ -110,6 +127,7 @@ export function useUniportPayment(
     const [refundAddress, setRefundAddressState] = useState(
         initialRefundAddress ?? ''
     );
+    useEffect(() => setAmountState(initialAmount ?? ''), [initialAmount]);
 
     // Default refund address for EVM chains (resolved from uniport.eth),
     // used only when the payer doesn't provide their own refund address.
@@ -128,11 +146,12 @@ export function useUniportPayment(
 
     // The refund address actually sent with quotes: the payer's input if
     // provided, otherwise the Uniport default — but only on EVM source chains.
-    const effectiveRefundAddress =
-        refundAddress.trim() ||
-        (selectedChain && isEvmChain(selectedChain.id)
-            ? evmDefaultRefundAddress
-            : '');
+    const effectiveRefundAddress = swapType === 'EXACT_OUTPUT'
+        ? ''
+        : refundAddress.trim() ||
+          (selectedChain && isEvmChain(selectedChain.id)
+              ? evmDefaultRefundAddress
+              : '');
 
     // Refs
     const pollingRef = useRef<NodeJS.Timeout | null>(null);
@@ -162,7 +181,11 @@ export function useUniportPayment(
                 previewAbortRef.current = null;
             }
 
-            if (!nextAmount || !nextSelectedToken || !nextRefundAddress) {
+            if (
+                !nextAmount ||
+                !nextSelectedToken ||
+                (swapType !== 'EXACT_OUTPUT' && !nextRefundAddress)
+            ) {
                 setIsLoadingPreview(false);
                 return;
             }
@@ -180,6 +203,7 @@ export function useUniportPayment(
                         amount: nextAmount,
                         recipient,
                         refundTo: nextRefundAddress,
+                        swapType,
                         dry: true,
                         signal: controller.signal,
                     });
@@ -188,10 +212,10 @@ export function useUniportPayment(
                     if (err instanceof Error && err.name === 'AbortError') {
                         return;
                     }
-                    const previewFailure =
-                        err instanceof Error
-                            ? err
-                            : new Error('Failed to fetch estimate');
+                    const previewFailure = normalizeError(
+                        err,
+                        'Failed to fetch estimate'
+                    );
                     setPreviewError(previewFailure);
                     console.warn('Preview quote failed:', previewFailure);
                 } finally {
@@ -202,7 +226,7 @@ export function useUniportPayment(
                 }
             }, 250);
         },
-        [destToken, recipient]
+        [destToken, recipient, swapType]
     );
 
     const setAmount = useCallback(
@@ -247,7 +271,11 @@ export function useUniportPayment(
 
     // Fetch quote (real, non-dry)
     const fetchQuote = useCallback(async () => {
-        if (!selectedToken || !amount || !effectiveRefundAddress) {
+        if (
+            !selectedToken ||
+            !amount ||
+            (swapType !== 'EXACT_OUTPUT' && !effectiveRefundAddress)
+        ) {
             setError(new Error('Missing required fields'));
             return;
         }
@@ -262,14 +290,14 @@ export function useUniportPayment(
                 amount,
                 recipient,
                 refundTo: effectiveRefundAddress,
+                swapType,
                 dry: false,
             });
 
             setQuote(result);
             setPaymentState('awaiting_deposit');
         } catch (err) {
-            const error =
-                err instanceof Error ? err : new Error('Failed to get quote');
+            const error = normalizeError(err, 'Failed to get quote');
             setError(error);
             setPaymentState('error');
             onError?.(error);
@@ -280,6 +308,7 @@ export function useUniportPayment(
         effectiveRefundAddress,
         recipient,
         destToken,
+        swapType,
         onError,
     ]);
 
@@ -411,7 +440,9 @@ export function useUniportPayment(
         refundAddress,
         effectiveRefundAddress,
         isUsingDefaultRefundAddress:
-            !refundAddress.trim() && !!effectiveRefundAddress,
+            swapType !== 'EXACT_OUTPUT' &&
+            !refundAddress.trim() &&
+            !!effectiveRefundAddress,
         destinationToken: destToken,
         chains,
         tokens,

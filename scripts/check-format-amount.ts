@@ -5,7 +5,10 @@
  * makes them readable without breaking clean amounts or edge cases.
  */
 import assert from 'node:assert';
-import { formatDisplayAmount } from '../src/core/intents';
+import {
+    formatDisplayAmount,
+    roundUpInputAmount,
+} from '../src/core/intents';
 
 // Real amountOutFormatted values seen from live quotes (18-decimal ETH,
 // 9-decimal SUI, 6-decimal USDC destinations) — this is the actual problem.
@@ -30,4 +33,10 @@ assert.equal(formatDisplayAmount('not-a-number'), 'not-a-number');
 assert.equal(formatDisplayAmount('0.0000001'), '0.0000001');
 assert.equal(formatDisplayAmount('99999999999999999999999'), '99999999999999999999999');
 
-console.log('OK — formatDisplayAmount verified against live ugly-decimal cases');
+// EXACT_OUTPUT input rounding: shortest friendly value, capped at 0.25%.
+assert.equal(roundUpInputAmount('5053447', 6), '5060000'); // 5.053447 → 5.06
+assert.equal(roundUpInputAmount('1999', 6), '2000');
+assert.equal(roundUpInputAmount('1000000', 6), '1000000');
+assert.equal(roundUpInputAmount('1', 6), '1'); // no friendly rounding fits the cap
+
+console.log('OK — amount display and exact-output input rounding verified');
