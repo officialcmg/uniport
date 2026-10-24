@@ -1,0 +1,38 @@
+name: Publish SDK
+
+# Release: bump "version" in package.json, commit, then push a matching tag:
+#   git tag v0.0.8 && git push origin v0.0.8
+# npm trusted publishing (OIDC) authenticates this workflow; no npm token is stored.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false
+      - run: npm ci
+      - name: Verify tag matches package version
+        run: test "$GITHUB_REF_NAME" = "v$(node -p "require('./package.json').version")"
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm publish
+      # Optional: rebuild demo.uniport.dev so it picks up the new version.
+      # Add a Vercel deploy hook URL as the DEMO_DEPLOY_HOOK repository secret to enable.
+      - name: Redeploy the demo
+        env:
+          DEMO_DEPLOY_HOOK: ${{ secrets.DEMO_DEPLOY_HOOK }}
+        if: ${{ env.DEMO_DEPLOY_HOOK != '' }}
+        run: curl -fsS -X POST "$DEMO_DEPLOY_HOOK" > /dev/null
