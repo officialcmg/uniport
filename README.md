@@ -186,6 +186,7 @@ The package exports:
 - `getExecutionStatus`
 - `getExplorerTxUrl` — block-explorer transaction URL for a given chain
 - `isEvmChain` — whether a `ChainId` is EVM-compatible
+- `usesEvmAddress` — whether a `ChainId` uses 0x EVM accounts (every EVM chain, plus HyperCore)
 - `resolveEnsName` — resolve any `.eth` name via the ENSIdeas API
 - `formatDisplayAmount` — rounds a human-readable amount to 6 significant digits for UI display only (never use the result for on-chain amounts)
 - `needsMemoDeposit` — whether a `ChainId` requires a memo alongside its deposit address

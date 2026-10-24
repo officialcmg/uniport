@@ -6,7 +6,7 @@ import React, { useEffect, useCallback, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { useUniportPayment } from '../hooks/useUniportPayment';
-import { CHAINS, getExplorerTxUrl, isEvmChain, type ChainId } from '../core/tokens';
+import { CHAINS, getExplorerTxUrl, usesEvmAddress, type ChainId } from '../core/tokens';
 import { UNIPORT_ENS_NAME } from '../core/ens';
 import { formatDisplayAmount } from '../core/intents';
 import type { UniportModalProps } from '../types';
@@ -271,35 +271,7 @@ function formatPreviewError(error: Error): string {
 }
 
 function formatChainLabel(chainId: string): string {
-    const labels: Record<string, string> = {
-        sui: 'Sui',
-        eth: 'Ethereum',
-        sol: 'Solana',
-        arb: 'Arbitrum',
-        base: 'Base',
-        op: 'Optimism',
-        pol: 'Polygon',
-        avax: 'Avalanche',
-        bsc: 'BNB Chain',
-        near: 'NEAR',
-        btc: 'Bitcoin',
-        ton: 'TON',
-        tron: 'Tron',
-        stellar: 'Stellar',
-        cardano: 'Cardano',
-        xrp: 'XRP Ledger',
-        doge: 'Dogecoin',
-        ltc: 'Litecoin',
-        bch: 'Bitcoin Cash',
-        aptos: 'Aptos',
-        starknet: 'Starknet',
-        bera: 'Berachain',
-        zec: 'Zcash',
-        gnosis: 'Gnosis',
-        monad: 'Monad',
-    };
-
-    return labels[chainId] || chainId.toUpperCase();
+    return CHAINS[chainId as ChainId]?.name ?? chainId.toUpperCase();
 }
 
 // ============================================================================
@@ -541,7 +513,7 @@ export function UniportModal({
                                 {tok?.symbol} on {ch?.name}
                             </div>
                             <div style={{ fontSize: '12px', color: t.textMuted, marginTop: 1 }}>
-                                → {payment.destinationToken.symbol} on {payment.destinationToken.chain.toUpperCase()}
+                                → {payment.destinationToken.symbol} on {formatChainLabel(payment.destinationToken.chain)}
                             </div>
                         </div>
                     </div>
@@ -580,7 +552,7 @@ export function UniportModal({
                             }}
                         >
                             Refund address on {ch?.name || 'the source chain'}
-                            {ch && isEvmChain(ch.id) && (
+                            {ch && usesEvmAddress(ch.id) && (
                                 <span style={{ fontWeight: 400, color: t.textMuted }}> (optional)</span>
                             )}
                         </label>
@@ -589,7 +561,7 @@ export function UniportModal({
                             value={payment.refundAddress}
                             onChange={(e) => payment.setRefundAddress(e.target.value)}
                             placeholder={
-                                ch && isEvmChain(ch.id)
+                                ch && usesEvmAddress(ch.id)
                                     ? `Optional — defaults to ${UNIPORT_ENS_NAME}`
                                     : `Enter a ${ch?.name || 'source chain'} refund address`
                             }

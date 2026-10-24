@@ -128,18 +128,23 @@ export const CHAIN_ICONS = {
 
 export type ChainId = keyof typeof CHAIN_ICONS;
 
-/**
- * Chains that use EVM-style addresses (0x...), as opposed to chain-specific formats.
- * HyperCore isn't an EVM, but its accounts are the same 0x keys, so the default
- * refund address (an EOA) is valid there too.
- */
+/** Chains that use EVM-style addresses (0x...), as opposed to chain-specific formats. */
 export const EVM_CHAINS: ChainId[] = [
     'eth', 'arb', 'base', 'op', 'pol', 'avax', 'bsc', 'gnosis', 'bera', 'monad', 'scroll',
-    'plasma', 'hood', 'xlayer', 'adi', 'hypercore',
+    'plasma', 'hood', 'xlayer', 'adi',
 ];
 
 export function isEvmChain(chain: ChainId): boolean {
     return EVM_CHAINS.includes(chain);
+}
+
+/**
+ * Chains whose accounts are 0x EVM keys: every EVM chain plus HyperCore, which
+ * isn't an EVM but shares the key format. The default refund address (an EOA)
+ * is valid on all of them.
+ */
+export function usesEvmAddress(chain: ChainId): boolean {
+    return isEvmChain(chain) || chain === 'hypercore';
 }
 
 /**

@@ -16,7 +16,7 @@ import {
 import {
     getSupportedChains,
     getToken,
-    isEvmChain,
+    usesEvmAddress,
     type Token,
     type Chain,
 } from '../core/tokens';
@@ -149,7 +149,7 @@ export function useUniportPayment(
     const effectiveRefundAddress = swapType === 'EXACT_OUTPUT'
         ? ''
         : refundAddress.trim() ||
-          (selectedChain && isEvmChain(selectedChain.id)
+          (selectedChain && usesEvmAddress(selectedChain.id)
               ? evmDefaultRefundAddress
               : '');
 
@@ -242,7 +242,7 @@ export function useUniportPayment(
             setRefundAddressState(newRefundAddress);
             const nextEffective =
                 newRefundAddress.trim() ||
-                (selectedChain && isEvmChain(selectedChain.id)
+                (selectedChain && usesEvmAddress(selectedChain.id)
                     ? evmDefaultRefundAddress
                     : '');
             schedulePreviewQuote(amount, nextEffective, selectedToken);
@@ -258,7 +258,7 @@ export function useUniportPayment(
         setPaymentState('selecting');
         const nextEffective =
             refundAddress.trim() ||
-            (isEvmChain(chain.id) ? evmDefaultRefundAddress : '');
+            (usesEvmAddress(chain.id) ? evmDefaultRefundAddress : '');
         schedulePreviewQuote(amount, nextEffective, nextToken);
     }, [amount, evmDefaultRefundAddress, refundAddress, schedulePreviewQuote]);
 
