@@ -29,10 +29,21 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
       - run: npm publish
-      # Optional: rebuild demo.uniport.dev so it picks up the new version.
-      # Add a Vercel deploy hook URL as the DEMO_DEPLOY_HOOK repository secret to enable.
+      # Rebuild demo.uniport.dev so it installs the new version (its Vercel build runs
+      # `npm install uniport-sdk@latest`). Enabled by the DEMO_DEPLOY_HOOK repository
+      # secret, a Vercel deploy hook URL for the uniport-demo project.
       - name: Redeploy the demo
         env:
           DEMO_DEPLOY_HOOK: ${{ secrets.DEMO_DEPLOY_HOOK }}
         if: ${{ env.DEMO_DEPLOY_HOOK != '' }}
-        run: curl -fsS -X POST "$DEMO_DEPLOY_HOOK" > /dev/null
+        run: |
+          # npm can take a few minutes to serve a new version; wait so the demo
+          # doesn't rebuild with the previous one.
+          version="$(node -p "require('./package.json').version")"
+          for i in $(seq 1 40); do
+            latest="$(npm view uniport-sdk dist-tags.latest 2>/dev/null || true)"
+            [ "$latest" = "$version" ] && break
+            sleep 15
+          done
+          echo "npm latest: $latest (released $version)"
+          curl -fsS -X POST "$DEMO_DEPLOY_HOOK" > /dev/null
