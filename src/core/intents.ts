@@ -216,6 +216,10 @@ export interface StatusResult {
     destinationTxHashes?: string[];
     /** Origin chain transaction hashes (if available) */
     originTxHashes?: string[];
+    /** 1Click's explorer link for each destination hash, index-aligned (newer backends only) */
+    destinationTxExplorerUrls?: (string | null)[];
+    /** 1Click's explorer link for each origin hash, index-aligned (newer backends only) */
+    originTxExplorerUrls?: (string | null)[];
 }
 
 // ============================================================================
