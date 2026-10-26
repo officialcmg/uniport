@@ -68,11 +68,16 @@ Legacy short aliases such as `arbUSDC` and `ethUSDC` are still accepted for back
 | Ethereum | `ethereumETH` | ETH |
 | Ethereum | `ethereumUSDC` | USDC |
 | Ethereum | `ethereumUSDT` | USDT |
+| Ethereum | `ethereumUSD1` | USD1 |
 | Ethereum | `ethereumWBTC` | WBTC |
+| Ethereum | `ethereumCbBTC` | cbBTC |
+| Ethereum | `ethereumWstETH` | wstETH |
+| Ethereum | `ethereumXAUT` | XAUT |
 | Ethereum | `ethereumDAI` | DAI |
 | Ethereum | `ethereumAAVE` | AAVE |
 | Ethereum | `ethereumUNI` | UNI |
 | Ethereum | `ethereumLINK` | LINK |
+| Ethereum | `ethereumAURORA` | AURORA |
 | Ethereum | `ethereumSHIB` | SHIB |
 | Ethereum | `ethereumPEPE` | PEPE |
 | Ethereum | `ethereumTURBO` | TURBO |
@@ -84,16 +89,21 @@ Legacy short aliases such as `arbUSDC` and `ethUSDC` are still accepted for back
 | Base | `baseETH` | ETH |
 | Base | `baseUSDC` | USDC |
 | Base | `baseCbBTC` | cbBTC |
+| Base | `baseVVV` | VVV |
+| Base | `baseKAITO` | KAITO |
 | Sui | `suiSUI` | SUI |
 | Sui | `suiUSDC` | USDC |
 | Optimism | `optimismETH` | ETH |
 | Optimism | `optimismUSDC` | USDC |
 | Optimism | `optimismUSDT` | USDT |
+| Optimism | `optimismUSDT0` | USDT0 |
 | Optimism | `optimismOP` | OP |
 | Solana | `solanaSOL` | SOL |
 | Solana | `solanaUSDC` | USDC |
 | Solana | `solanaUSDT` | USDT |
+| Solana | `solanaUSD1` | USD1 |
 | Solana | `solanaWIF` | $WIF |
+| Solana | `solanaPENGU` | PENGU |
 | Bitcoin | `bitcoinBTC` | BTC |
 | Polygon | `polygonPOL` | POL |
 | Polygon | `polygonUSDC` | USDC |
@@ -104,6 +114,7 @@ Legacy short aliases such as `arbUSDC` and `ethUSDC` are still accepted for back
 | BNB Chain | `bscBNB` | BNB |
 | BNB Chain | `bscUSDC` | USDC |
 | BNB Chain | `bscUSDT` | USDT |
+| BNB Chain | `bscASTER` | ASTER |
 | TON | `tonTON` | GRAM |
 | TON | `tonUSDT` | USDT |
 | Tron | `tronTRX` | TRX |
@@ -111,14 +122,19 @@ Legacy short aliases such as `arbUSDC` and `ethUSDC` are still accepted for back
 | NEAR | `nearNEAR` | wNEAR |
 | NEAR | `nearUSDC` | USDC |
 | NEAR | `nearUSDT` | USDT |
+| NEAR | `nearRHEA` | RHEA |
+| NEAR | `nearAURORA` | AURORA |
 | Cardano | `cardanoADA` | ADA |
 | XRP Ledger | `xrpXRP` | XRP |
 | Dogecoin | `dogecoinDOGE` | DOGE |
 | Litecoin | `litecoinLTC` | LTC |
 | Bitcoin Cash | `bitcoinCashBCH` | BCH |
 | Aptos | `aptosAPT` | APT |
+| Aptos | `aptosUSDC` | USDC |
+| Aptos | `aptosUSDT` | USDT |
 | Starknet | `starknetSTRK` | STRK |
 | Berachain | `berachainBERA` | BERA |
+| Berachain | `berachainUSDT0` | USDT0 |
 | Zcash | `zcashZEC` | ZEC |
 | Gnosis | `gnosisUSDC` | USDC |
 | Gnosis | `gnosisUSDT` | USDT |
@@ -139,6 +155,7 @@ Legacy short aliases such as `arbUSDC` and `ethUSDC` are still accepted for back
 | Robinhood Chain | `robinhoodETH` | ETH |
 | Robinhood Chain | `robinhoodUSDG` | USDG |
 | Robinhood Chain | `robinhoodCASHCAT` | CASHCAT |
+| X Layer | `xlayerOKB` | OKB |
 | X Layer | `xlayerUSDC` | USDC |
 | X Layer | `xlayerUSDT0` | USDT0 |
 | Dash | `dashDASH` | DASH |
