@@ -58,7 +58,6 @@ export const TOKEN_ICONS = {
 
     // DeFi & Others
     AAVE: 'https://coin-images.coingecko.com/coins/images/12645/large/aave-token-round.png?1720472354',
-    GMX: 'https://coin-images.coingecko.com/coins/images/18323/large/arbit.png?1696517814',
     SAFE: 'https://coin-images.coingecko.com/coins/images/27032/large/Artboard_1_copy_8circle-1.png?1696526084',
     COW: 'https://coin-images.coingecko.com/coins/images/24384/large/CoW-token_logo.png?1719524382',
     UNI: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984/logo.png',
@@ -76,7 +75,6 @@ export const TOKEN_ICONS = {
     // Meme coins
     CASHCAT: 'https://coin-images.coingecko.com/coins/images/102174280/large/cashcat-logo.jpg?1782922765',
     WIF: 'https://s2.coinmarketcap.com/static/img/coins/64x64/28752.png',
-    BRETT: 'https://s2.coinmarketcap.com/static/img/coins/64x64/29743.png',
     TURBO: 'https://s2.coinmarketcap.com/static/img/coins/64x64/24911.png',
 
     // Default fallback
@@ -336,7 +334,6 @@ export const arbitrumUSDT = createToken('arb', 'USDT0', 'nep141:arb-0xfd086bc7cd
     aliases: ['arbUSDT', 'arbitrumUSDT0'],
 });
 export const arbitrumARB = createToken('arb', 'ARB', 'nep141:arb-0x912ce59144191c1204e64559fe8253a0e49e6548.omft.near', 18, '0x912ce59144191c1204e64559fe8253a0e49e6548');
-export const arbitrumGMX = createToken('arb', 'GMX', 'nep141:arb-0xfc5a1a6eb076a2c7ad06ed22c90d7e710e35ad0a.omft.near', 18, '0xfc5a1a6eb076a2c7ad06ed22c90d7e710e35ad0a');
 
 // ============================================================================
 // BASE TOKENS
@@ -345,7 +342,6 @@ export const arbitrumGMX = createToken('arb', 'GMX', 'nep141:arb-0xfc5a1a6eb076a
 export const baseETH = createToken('base', 'ETH', 'nep141:base.omft.near', 18);
 export const baseUSDC = createToken('base', 'USDC', 'nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near', 6, '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913');
 export const baseCbBTC = createToken('base', 'cbBTC', 'nep141:base-0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf.omft.near', 8, '0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf', { name: 'baseCbBTC' });
-export const baseBRETT = createToken('base', 'BRETT', 'nep141:base-0x532f27101965dd16442e59d40670faf5ebb142e4.omft.near', 18, '0x532f27101965dd16442e59d40670faf5ebb142e4');
 
 // ============================================================================
 // SCROLL TOKENS
@@ -524,13 +520,13 @@ export const CHAINS: Record<ChainId, Chain> = {
         id: 'arb',
         name: 'Arbitrum',
         icon: CHAIN_ICONS.arb,
-        tokens: [arbitrumETH, arbitrumUSDC, arbitrumUSDT, arbitrumARB, arbitrumGMX],
+        tokens: [arbitrumETH, arbitrumUSDC, arbitrumUSDT, arbitrumARB],
     },
     base: {
         id: 'base',
         name: 'Base',
         icon: CHAIN_ICONS.base,
-        tokens: [baseETH, baseUSDC, baseCbBTC, baseBRETT],
+        tokens: [baseETH, baseUSDC, baseCbBTC],
     },
     sui: {
         id: 'sui',

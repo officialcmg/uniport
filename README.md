@@ -81,11 +81,9 @@ Legacy short aliases such as `arbUSDC` and `ethUSDC` are still accepted for back
 | Arbitrum | `arbitrumUSDC` | USDC |
 | Arbitrum | `arbitrumUSDT` | USDT0 |
 | Arbitrum | `arbitrumARB` | ARB |
-| Arbitrum | `arbitrumGMX` | GMX |
 | Base | `baseETH` | ETH |
 | Base | `baseUSDC` | USDC |
 | Base | `baseCbBTC` | cbBTC |
-| Base | `baseBRETT` | BRETT |
 | Sui | `suiSUI` | SUI |
 | Sui | `suiUSDC` | USDC |
 | Optimism | `optimismETH` | ETH |
