@@ -524,6 +524,7 @@ export function UniportModal({
                             type="text" inputMode="decimal" placeholder="0.00"
                             value={payment.amount}
                             onChange={e => payment.setAmount(e.target.value)}
+                            readOnly={isExactOutput}
                             style={{
                                 width: '100%', textAlign: 'center',
                                 fontSize: '54px', fontWeight: 600,
@@ -532,7 +533,7 @@ export function UniportModal({
                                 caretColor: t.accent, fontFamily: 'inherit',
                                 letterSpacing: '-0.04em', lineHeight: 1, padding: 0,
                             }}
-                            autoFocus
+                            autoFocus={!isExactOutput}
                         />
                         <div style={{ fontSize: '14px', color: t.textMuted, marginTop: 8 }}>
                             {isExactOutput
