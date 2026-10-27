@@ -58,13 +58,21 @@ export const TOKEN_ICONS = {
 
     // DeFi & Others
     AAVE: 'https://coin-images.coingecko.com/coins/images/12645/large/aave-token-round.png?1720472354',
-    GMX: 'https://coin-images.coingecko.com/coins/images/18323/large/arbit.png?1696517814',
     SAFE: 'https://coin-images.coingecko.com/coins/images/27032/large/Artboard_1_copy_8circle-1.png?1696526084',
     COW: 'https://coin-images.coingecko.com/coins/images/24384/large/CoW-token_logo.png?1719524382',
     UNI: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984/logo.png',
     LINK: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x514910771AF9Ca656af840dff83E8264EcF986CA/logo.png',
     SHIB: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE/logo.png',
     PEPE: 'https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x6982508145454Ce325dDbE47a25d4ec3d2311933/logo.png',
+    wstETH: 'https://coin-images.coingecko.com/coins/images/18834/large/wstETH.png?1696518295',
+    USD1: 'https://coin-images.coingecko.com/coins/images/54977/large/USD1_1000x1000_transparent.png?1749297002',
+    XAUT: 'https://coin-images.coingecko.com/coins/images/10481/large/logo.png?1774627372',
+    AURORA: 'https://coin-images.coingecko.com/coins/images/20582/large/aurora.jpeg?1696519989',
+    VVV: 'https://coin-images.coingecko.com/coins/images/54023/large/VVV_Token_Transparent.png?1741856877',
+    KAITO: 'https://coin-images.coingecko.com/coins/images/54411/large/Qm4DW488_400x400.jpg?1739552780',
+    ASTER: 'https://coin-images.coingecko.com/coins/images/69040/large/_ASTER.png?1757326782',
+    OKB: 'https://coin-images.coingecko.com/coins/images/4463/large/WeChat_Image_20220118095654.png?1696505053',
+    RHEA: 'https://coin-images.coingecko.com/coins/images/67682/large/RHEA_Logo.png?1753517263',
 
     // Ecosystem tokens
     STRK: 'https://coin-images.coingecko.com/coins/images/26433/large/starknet.png',
@@ -75,8 +83,8 @@ export const TOKEN_ICONS = {
 
     // Meme coins
     CASHCAT: 'https://coin-images.coingecko.com/coins/images/102174280/large/cashcat-logo.jpg?1782922765',
+    PENGU: 'https://coin-images.coingecko.com/coins/images/52622/large/PUDGY_PENGUINS_PENGU_PFP.png?1733809110',
     WIF: 'https://s2.coinmarketcap.com/static/img/coins/64x64/28752.png',
-    BRETT: 'https://s2.coinmarketcap.com/static/img/coins/64x64/29743.png',
     TURBO: 'https://s2.coinmarketcap.com/static/img/coins/64x64/24911.png',
 
     // Default fallback
@@ -323,6 +331,11 @@ export const ethereumSHIB = createToken('eth', 'SHIB', 'nep141:eth-0x95ad61b0a15
 export const ethereumPEPE = createToken('eth', 'PEPE', 'nep141:eth-0x6982508145454ce325ddbe47a25d4ec3d2311933.omft.near', 18, '0x6982508145454ce325ddbe47a25d4ec3d2311933');
 export const ethereumTURBO = createToken('eth', 'TURBO', 'nep141:eth-0xa35923162c49cf95e6bf26623385eb431ad920d3.omft.near', 18, '0xa35923162c49cf95e6bf26623385eb431ad920d3');
 export const ethereumSAFE = createToken('eth', 'SAFE', 'nep141:eth-0x5afe3855358e112b5647b952709e6165e1c1eeee.omft.near', 18, '0x5afe3855358e112b5647b952709e6165e1c1eeee');
+export const ethereumUSD1 = createToken('eth', 'USD1', 'nep141:eth-0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d.omft.near', 18, '0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d');
+export const ethereumCbBTC = createToken('eth', 'cbBTC', 'nep141:eth-0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf.omft.near', 8, '0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf', { name: 'ethereumCbBTC' });
+export const ethereumWstETH = createToken('eth', 'wstETH', 'nep141:eth-0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0.omft.near', 18, '0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0', { name: 'ethereumWstETH' });
+export const ethereumXAUT = createToken('eth', 'XAUT', 'nep141:eth-0x68749665ff8d2d112fa859aa293f07a622782f38.omft.near', 6, '0x68749665ff8d2d112fa859aa293f07a622782f38');
+export const ethereumAURORA = createToken('eth', 'AURORA', 'nep141:eth-0xaaaaaa20d9e0e2461697782ef11675f668207961.omft.near', 18, '0xaaaaaa20d9e0e2461697782ef11675f668207961');
 
 // ============================================================================
 // ARBITRUM TOKENS
@@ -336,7 +349,6 @@ export const arbitrumUSDT = createToken('arb', 'USDT0', 'nep141:arb-0xfd086bc7cd
     aliases: ['arbUSDT', 'arbitrumUSDT0'],
 });
 export const arbitrumARB = createToken('arb', 'ARB', 'nep141:arb-0x912ce59144191c1204e64559fe8253a0e49e6548.omft.near', 18, '0x912ce59144191c1204e64559fe8253a0e49e6548');
-export const arbitrumGMX = createToken('arb', 'GMX', 'nep141:arb-0xfc5a1a6eb076a2c7ad06ed22c90d7e710e35ad0a.omft.near', 18, '0xfc5a1a6eb076a2c7ad06ed22c90d7e710e35ad0a');
 
 // ============================================================================
 // BASE TOKENS
@@ -345,7 +357,8 @@ export const arbitrumGMX = createToken('arb', 'GMX', 'nep141:arb-0xfc5a1a6eb076a
 export const baseETH = createToken('base', 'ETH', 'nep141:base.omft.near', 18);
 export const baseUSDC = createToken('base', 'USDC', 'nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near', 6, '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913');
 export const baseCbBTC = createToken('base', 'cbBTC', 'nep141:base-0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf.omft.near', 8, '0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf', { name: 'baseCbBTC' });
-export const baseBRETT = createToken('base', 'BRETT', 'nep141:base-0x532f27101965dd16442e59d40670faf5ebb142e4.omft.near', 18, '0x532f27101965dd16442e59d40670faf5ebb142e4');
+export const baseVVV = createToken('base', 'VVV', 'nep141:base-0xacfe6019ed1a7dc6f7b508c02d1b04ec88cc21bf.omft.near', 18, '0xacfe6019ed1a7dc6f7b508c02d1b04ec88cc21bf');
+export const baseKAITO = createToken('base', 'KAITO', 'nep141:base-0x98d0baa52b2d063e780de12f615f963fe8537553.omft.near', 18, '0x98d0baa52b2d063e780de12f615f963fe8537553');
 
 // ============================================================================
 // SCROLL TOKENS
@@ -362,6 +375,7 @@ export const optimismETH = createToken('op', 'ETH', 'nep245:v2_1.omni.hot.tg:10_
 export const optimismUSDC = createToken('op', 'USDC', 'nep245:v2_1.omni.hot.tg:10_A2ewyUyDp6qsue1jqZsGypkCxRJ', 6, '0x0b2c639c533813f4aa9d7837caf62653d097ff85');
 export const optimismUSDT = createToken('op', 'USDT', 'nep245:v2_1.omni.hot.tg:10_359RPSJVdTxwTJT9TyGssr2rFoWo', 6, '0x94b008aa00579c1307b0ef2c499ad98a8ce58e58');
 export const optimismOP = createToken('op', 'OP', 'nep245:v2_1.omni.hot.tg:10_vLAiSt9KfUGKpw5cD3vsSyNYBo7', 18, '0x4200000000000000000000000000000000000042');
+export const optimismUSDT0 = createToken('op', 'USDT0', 'nep245:v2_1.omni.hot.tg:10_2R1RXDBxCyJTeMEsdXydh7xsHmz', 6, '0x01bff41798a0bcf287b996046ca68b395dbc1071');
 
 // ============================================================================
 // SOLANA TOKENS
@@ -371,6 +385,8 @@ export const solanaSOL = createToken('sol', 'SOL', 'nep141:sol.omft.near', 9);
 export const solanaUSDC = createToken('sol', 'USDC', 'nep141:sol-5ce3bf3a31af18be40ba30f721101b4341690186.omft.near', 6, 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
 export const solanaUSDT = createToken('sol', 'USDT', 'nep141:sol-c800a4bd850783ccb82c2b2c7e84175443606352.omft.near', 6, 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB');
 export const solanaWIF = createToken('sol', '$WIF', 'nep141:sol-b9c68f94ec8fd160137af8cdfe5e61cd68e2afba.omft.near', 6, 'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm');
+export const solanaUSD1 = createToken('sol', 'USD1', 'nep141:sol-0x936420c6ae310eb29511d139991654f922456fbe.omdep.near', 6, 'USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB');
+export const solanaPENGU = createToken('sol', 'PENGU', 'nep141:sol-0xaad74c68eecfc9f8c5bdcea614f6167048c795ef.omdep.near', 6, '2zMMhcVQEXDtdE6vsFS7S7D5oUodfJHE8vd1gnBouauv');
 
 // ============================================================================
 // BITCOIN
@@ -401,6 +417,7 @@ export const avalancheUSDT = createToken('avax', 'USDT', 'nep245:v2_1.omni.hot.t
 export const bscBNB = createToken('bsc', 'BNB', 'nep245:v2_1.omni.hot.tg:56_11111111111111111111', 18);
 export const bscUSDC = createToken('bsc', 'USDC', 'nep245:v2_1.omni.hot.tg:56_2w93GqMcEmQFDru84j3HZZWt557r', 18, '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d');
 export const bscUSDT = createToken('bsc', 'USDT', 'nep245:v2_1.omni.hot.tg:56_2CMMyVTGZkeyNZTSvS5sarzfir6g', 18, '0x55d398326f99059ff775485246999027b3197955');
+export const bscASTER = createToken('bsc', 'ASTER', 'nep245:v2_1.omni.hot.tg:56_12zbnsg6xndDVj25QyL82YMPudb', 18, '0x000ae314e2a2172a039b26378814c252734f556a');
 
 // ============================================================================
 // TON TOKENS
@@ -430,8 +447,11 @@ export const dogecoinDOGE = createToken('doge', 'DOGE', 'nep141:doge.omft.near',
 export const litecoinLTC = createToken('ltc', 'LTC', 'nep141:ltc.omft.near', 8);
 export const bitcoinCashBCH = createToken('bch', 'BCH', 'nep141:bch.omft.near', 8);
 export const aptosAPT = createToken('aptos', 'APT', 'nep141:aptos.omft.near', 8);
+export const aptosUSDT = createToken('aptos', 'USDT', 'nep141:aptos-88cb7619440a914fe6400149a12b443c3ac21d59.omft.near', 6, '0x357b0b74bc833e95a115ad22604854d6b0fca151cecd94111770e5d6ffc9dc2b');
+export const aptosUSDC = createToken('aptos', 'USDC', 'nep141:aptos-34ee497f210c5a511e8d5b53bc56d75b63612bb5.omft.near', 6, '0xbae207659db88bea0cbead6da0ed00aac12edcdda169e591cd41c94180b46f3b');
 export const starknetSTRK = createToken('starknet', 'STRK', 'nep141:starknet.omft.near', 18);
 export const berachainBERA = createToken('bera', 'BERA', 'nep141:bera.omft.near', 18);
+export const berachainUSDT0 = createToken('bera', 'USDT0', 'nep141:bera-0x779ded0c9e1022225f8e0630b35a9b54be713736.omft.near', 6, '0x779ded0c9e1022225f8e0630b35a9b54be713736');
 export const zcashZEC = createToken('zec', 'ZEC', 'nep141:zec.omft.near', 8);
 export const stellarXLM = createToken('stellar', 'XLM', 'nep245:v2_1.omni.hot.tg:1100_111bzQBB5v7AhLyPMDwS8uJgQV24KaAPXtwyVWu2KXbbfQU6NXRCz', 7);
 export const stellarUSDC = createToken('stellar', 'USDC', 'nep245:v2_1.omni.hot.tg:1100_111bzQBB65GxAPAVoxqmMcgYo5oS3txhqs1Uh1cgahKQUeTUq1TJu', 7, 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN');
@@ -443,6 +463,8 @@ export const nearNEAR = createToken('near', 'wNEAR', 'nep141:wrap.near', 24, 'wr
 });
 export const nearUSDC = createToken('near', 'USDC', 'nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1', 6, '17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1');
 export const nearUSDT = createToken('near', 'USDT', 'nep141:usdt.tether-token.near', 6, 'usdt.tether-token.near');
+export const nearRHEA = createToken('near', 'RHEA', 'nep141:token.rhealab.near', 18, 'token.rhealab.near');
+export const nearAURORA = createToken('near', 'AURORA', 'nep141:aaaaaa20d9e0e2461697782ef11675f668207961.factory.bridge.near', 18, 'aaaaaa20d9e0e2461697782ef11675f668207961.factory.bridge.near');
 
 // ============================================================================
 // GNOSIS TOKENS
@@ -493,6 +515,7 @@ export const robinhoodCASHCAT = createToken('hood', 'CASHCAT', 'nep141:hood-0x02
 // X LAYER TOKENS
 // ============================================================================
 
+export const xlayerOKB = createToken('xlayer', 'OKB', 'nep245:v2_1.omni.hot.tg:196_11111111111111111111', 18, undefined);
 export const xlayerUSDC = createToken('xlayer', 'USDC', 'nep245:v2_1.omni.hot.tg:196_2dK9kLNR7Ekq7su8FxNGiUW3djTw', 6, '0x74b7f16337b8972027f6196a17a631ac6de26d22');
 export const xlayerUSDT0 = createToken('xlayer', 'USDT0', 'nep245:v2_1.omni.hot.tg:196_2fezDCvVYRsG8wrK6deJ2VRPiAS1', 6, '0x779ded0c9e1022225f8e0630b35a9b54be713736');
 
@@ -518,19 +541,19 @@ export const CHAINS: Record<ChainId, Chain> = {
         id: 'eth',
         name: 'Ethereum',
         icon: CHAIN_ICONS.eth,
-        tokens: [ethereumETH, ethereumUSDC, ethereumUSDT, ethereumWBTC, ethereumDAI, ethereumAAVE, ethereumUNI, ethereumLINK, ethereumSHIB, ethereumPEPE, ethereumTURBO, ethereumSAFE],
+        tokens: [ethereumETH, ethereumUSDC, ethereumUSDT, ethereumUSD1, ethereumWBTC, ethereumCbBTC, ethereumWstETH, ethereumXAUT, ethereumDAI, ethereumAAVE, ethereumUNI, ethereumLINK, ethereumAURORA, ethereumSHIB, ethereumPEPE, ethereumTURBO, ethereumSAFE],
     },
     arb: {
         id: 'arb',
         name: 'Arbitrum',
         icon: CHAIN_ICONS.arb,
-        tokens: [arbitrumETH, arbitrumUSDC, arbitrumUSDT, arbitrumARB, arbitrumGMX],
+        tokens: [arbitrumETH, arbitrumUSDC, arbitrumUSDT, arbitrumARB],
     },
     base: {
         id: 'base',
         name: 'Base',
         icon: CHAIN_ICONS.base,
-        tokens: [baseETH, baseUSDC, baseCbBTC, baseBRETT],
+        tokens: [baseETH, baseUSDC, baseCbBTC, baseVVV, baseKAITO],
     },
     sui: {
         id: 'sui',
@@ -542,13 +565,13 @@ export const CHAINS: Record<ChainId, Chain> = {
         id: 'op',
         name: 'Optimism',
         icon: CHAIN_ICONS.op,
-        tokens: [optimismETH, optimismUSDC, optimismUSDT, optimismOP],
+        tokens: [optimismETH, optimismUSDC, optimismUSDT, optimismUSDT0, optimismOP],
     },
     sol: {
         id: 'sol',
         name: 'Solana',
         icon: CHAIN_ICONS.sol,
-        tokens: [solanaSOL, solanaUSDC, solanaUSDT, solanaWIF],
+        tokens: [solanaSOL, solanaUSDC, solanaUSDT, solanaUSD1, solanaWIF, solanaPENGU],
     },
     btc: {
         id: 'btc',
@@ -572,7 +595,7 @@ export const CHAINS: Record<ChainId, Chain> = {
         id: 'bsc',
         name: 'BNB Chain',
         icon: CHAIN_ICONS.bsc,
-        tokens: [bscBNB, bscUSDC, bscUSDT],
+        tokens: [bscBNB, bscUSDC, bscUSDT, bscASTER],
     },
     ton: {
         id: 'ton',
@@ -590,7 +613,7 @@ export const CHAINS: Record<ChainId, Chain> = {
         id: 'near',
         name: 'NEAR',
         icon: CHAIN_ICONS.near,
-        tokens: [nearNEAR, nearUSDC, nearUSDT],
+        tokens: [nearNEAR, nearUSDC, nearUSDT, nearRHEA, nearAURORA],
     },
     cardano: {
         id: 'cardano',
@@ -626,7 +649,7 @@ export const CHAINS: Record<ChainId, Chain> = {
         id: 'aptos',
         name: 'Aptos',
         icon: CHAIN_ICONS.aptos,
-        tokens: [aptosAPT],
+        tokens: [aptosAPT, aptosUSDC, aptosUSDT],
     },
     starknet: {
         id: 'starknet',
@@ -638,7 +661,7 @@ export const CHAINS: Record<ChainId, Chain> = {
         id: 'bera',
         name: 'Berachain',
         icon: CHAIN_ICONS.bera,
-        tokens: [berachainBERA],
+        tokens: [berachainBERA, berachainUSDT0],
     },
     zec: {
         id: 'zec',
@@ -686,7 +709,7 @@ export const CHAINS: Record<ChainId, Chain> = {
         id: 'xlayer',
         name: 'X Layer',
         icon: CHAIN_ICONS.xlayer,
-        tokens: [xlayerUSDC, xlayerUSDT0],
+        tokens: [xlayerOKB, xlayerUSDC, xlayerUSDT0],
     },
     dash: {
         id: 'dash',
