@@ -1,49 +1,93 @@
 name: Publish SDK
 
-# Release: bump "version" in package.json, commit, then push a matching tag:
-#   git tag v0.0.8 && git push origin v0.0.8
+# Release: merge a PR that bumps "version" in package.json (npm version x.y.z
+# --no-git-tag-version). On that push to main this workflow publishes the
+# version to npm and creates its vX.Y.Z tag. Pushing a vX.Y.Z tag by hand
+# still works. Every other push to main finds the version already published
+# and tagged, and stops.
 # npm trusted publishing (OIDC) authenticates this workflow; no npm token is stored.
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*"
 
 permissions:
-  contents: read
-  id-token: write
+  contents: write # create the release tag
+  id-token: write # npm trusted publishing
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v6
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
           package-manager-cache: false
-      - run: npm ci
-      - name: Verify tag matches package version
-        run: test "$GITHUB_REF_NAME" = "v$(node -p "require('./package.json').version")"
-      - run: npm run typecheck
-      - run: npm run build
-      - run: npm publish
+
+      - name: Work out what this push needs
+        id: plan
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          tag="v$version"
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "$GITHUB_REF_NAME" != "$tag" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json version $version" >&2
+            exit 1
+          fi
+          if npm view "uniport-sdk@$version" version >/dev/null 2>&1; then published=true; else published=false; fi
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then tagged=true; else tagged=false; fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "publish=$([ "$published" = false ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "create_tag=$([ "$tagged" = false ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "$version: published=$published tagged=$tagged"
+
+      - if: steps.plan.outputs.publish == 'true'
+        run: npm ci
+      - if: steps.plan.outputs.publish == 'true'
+        run: npm run typecheck
+      - if: steps.plan.outputs.publish == 'true'
+        run: npm run build
+      - if: steps.plan.outputs.publish == 'true'
+        run: npm publish
+
+      # Tagged after publishing, so a failed publish leaves no tag behind and the
+      # next run retries. A tag pushed with GITHUB_TOKEN doesn't start another run.
+      - name: Tag the release
+        if: steps.plan.outputs.create_tag == 'true'
+        env:
+          TAG: ${{ steps.plan.outputs.tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Release ${TAG#v}" "$GITHUB_SHA"
+          git push origin "refs/tags/$TAG"
+
       # Rebuild demo.uniport.dev so it installs the new version (its Vercel build runs
       # `npm install uniport-sdk@latest`). Enabled by the DEMO_DEPLOY_HOOK repository
       # secret, a Vercel deploy hook URL for the uniport-demo project.
       - name: Redeploy the demo
+        if: steps.plan.outputs.publish == 'true' && env.DEMO_DEPLOY_HOOK != ''
         env:
           DEMO_DEPLOY_HOOK: ${{ secrets.DEMO_DEPLOY_HOOK }}
-        if: ${{ env.DEMO_DEPLOY_HOOK != '' }}
+          VERSION: ${{ steps.plan.outputs.version }}
         run: |
           # npm can take a few minutes to serve a new version; wait so the demo
           # doesn't rebuild with the previous one.
-          version="$(node -p "require('./package.json').version")"
           for i in $(seq 1 40); do
             latest="$(npm view uniport-sdk dist-tags.latest 2>/dev/null || true)"
-            [ "$latest" = "$version" ] && break
+            [ "$latest" = "$VERSION" ] && break
             sleep 15
           done
-          echo "npm latest: $latest (released $version)"
+          echo "npm latest: $latest (released $VERSION)"
           curl -fsS -X POST "$DEMO_DEPLOY_HOOK" > /dev/null
