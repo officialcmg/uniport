@@ -85,13 +85,6 @@ jobs:
           target="${target:-$GITHUB_SHA}"
           if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
             target="$(git rev-parse "$TAG^{commit}")"
-            # Earlier versions of this workflow pushed unsigned annotated tags and no
-            # release. Replace such a tag (only one this workflow made) with the
-            # release's lightweight tag on the same commit.
-            if [ "$(git cat-file -t "refs/tags/$TAG")" = "tag" ] && \
-               [ "$(git for-each-ref "refs/tags/$TAG" --format='%(taggername)')" = "github-actions[bot]" ]; then
-              git push origin ":refs/tags/$TAG"
-            fi
           fi
           gh release create "$TAG" --target "$target" --title "Release ${TAG#v}" --generate-notes --latest
 
