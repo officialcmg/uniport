@@ -231,10 +231,12 @@ export function useUniportPayment(
 
     const setAmount = useCallback(
         (newAmount: string) => {
+            // An app-set amount is the payment target; the payer can't change it.
+            if (swapType === 'EXACT_OUTPUT') return;
             setAmountState(newAmount);
             schedulePreviewQuote(newAmount, effectiveRefundAddress, selectedToken);
         },
-        [effectiveRefundAddress, schedulePreviewQuote, selectedToken]
+        [effectiveRefundAddress, schedulePreviewQuote, selectedToken, swapType]
     );
 
     const setRefundAddress = useCallback(

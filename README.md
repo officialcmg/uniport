@@ -46,6 +46,8 @@ The SDK uses Uniport's hosted backend. No API key or backend URL is required for
 
 If `refundAddress` is omitted, the payer can enter it inside the modal. The refund address is on the source chain the payer sends from.
 
+When `amount` is set, the payer can't change it in the modal. `onSuccess` runs in the payer's browser, so before granting goods or access, confirm on your server that the recipient received the amount.
+
 When `amount` is supplied, the modal requests that exact destination amount and rounds the quoted input upward only when the increase is at most 0.25%. Rounded surplus and failed-swap refunds are credited to Uniport's configured Intents account. When `amount` is omitted, the payer enters an exact input amount and receives the quoted output.
 
 **EVM source chains only:** if the payer leaves the refund address blank, it defaults to Uniport's own address (resolved from `uniport.eth`, with a hardcoded fallback if resolution fails) rather than blocking the payment. This exists because the underlying 1Click API currently requires an explicit refund address — it cannot yet auto-refund to the depositing wallet. On non-EVM chains (Sui, Solana, Bitcoin, etc.) a refund address is still required from the payer, since there is no Uniport-controlled address on those chains to fall back to.
