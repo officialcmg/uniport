@@ -2,9 +2,9 @@ name: Publish SDK
 
 # Release: merge a PR that bumps "version" in package.json (npm version x.y.z
 # --no-git-tag-version). On that push to main this workflow publishes the
-# version to npm and creates its vX.Y.Z tag. Pushing a vX.Y.Z tag by hand
-# still works. Every other push to main finds the version already published
-# and tagged, and stops.
+# version to npm and creates its GitHub release (and with it the vX.Y.Z tag).
+# Creating a release or pushing a vX.Y.Z tag by hand still works. Every other
+# push to main finds the version already published and released, and stops.
 # npm trusted publishing (OIDC) authenticates this workflow; no npm token is stored.
 
 on:
@@ -15,7 +15,7 @@ on:
       - "v*"
 
 permissions:
-  contents: write # create the release tag
+  contents: write # create the GitHub release and its tag
   id-token: write # npm trusted publishing
 
 concurrency:
@@ -37,6 +37,8 @@ jobs:
 
       - name: Work out what this push needs
         id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           version="$(node -p "require('./package.json').version")"
           tag="v$version"
@@ -45,12 +47,19 @@ jobs:
             exit 1
           fi
           if npm view "uniport-sdk@$version" version >/dev/null 2>&1; then published=true; else published=false; fi
-          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then tagged=true; else tagged=false; fi
+          if gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag" --silent 2>"$RUNNER_TEMP/release-check.err"; then
+            released=true
+          elif grep -q "HTTP 404" "$RUNNER_TEMP/release-check.err"; then
+            released=false
+          else
+            cat "$RUNNER_TEMP/release-check.err" >&2
+            exit 1
+          fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "publish=$([ "$published" = false ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
-          echo "create_tag=$([ "$tagged" = false ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
-          echo "$version: published=$published tagged=$tagged"
+          echo "create_release=$([ "$released" = false ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "$version: published=$published released=$released"
 
       - if: steps.plan.outputs.publish == 'true'
         run: npm ci
@@ -61,17 +70,30 @@ jobs:
       - if: steps.plan.outputs.publish == 'true'
         run: npm publish
 
-      # Tagged after publishing, so a failed publish leaves no tag behind and the
-      # next run retries. A tag pushed with GITHUB_TOKEN doesn't start another run.
-      - name: Tag the release
-        if: steps.plan.outputs.create_tag == 'true'
+      # Released after publishing, so a failed publish leaves no release behind and
+      # the next run retries. The release creates a lightweight tag on the merge
+      # commit, which GitHub signs, so the tag shows as Verified; a tag created by
+      # GITHUB_TOKEN doesn't start another run.
+      - name: Create the GitHub release
+        if: steps.plan.outputs.create_release == 'true'
         env:
+          GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.plan.outputs.tag }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "$TAG" -m "Release ${TAG#v}" "$GITHUB_SHA"
-          git push origin "refs/tags/$TAG"
+          # The commit that set package.json to this version, not necessarily this push's.
+          target="$(git log -1 --format=%H -S"\"version\": \"${TAG#v}\"" -- package.json)"
+          target="${target:-$GITHUB_SHA}"
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            target="$(git rev-parse "$TAG^{commit}")"
+            # Earlier versions of this workflow pushed unsigned annotated tags and no
+            # release. Replace such a tag (only one this workflow made) with the
+            # release's lightweight tag on the same commit.
+            if [ "$(git cat-file -t "refs/tags/$TAG")" = "tag" ] && \
+               [ "$(git for-each-ref "refs/tags/$TAG" --format='%(taggername)')" = "github-actions[bot]" ]; then
+              git push origin ":refs/tags/$TAG"
+            fi
+          fi
+          gh release create "$TAG" --target "$target" --title "Release ${TAG#v}" --generate-notes --latest
 
       # Rebuild demo.uniport.dev so it installs the new version (its Vercel build runs
       # `npm install uniport-sdk@latest`). Enabled by the DEMO_DEPLOY_HOOK repository
