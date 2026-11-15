@@ -5,7 +5,20 @@ name: Publish SDK
 # version to npm and creates its GitHub release (and with it the vX.Y.Z tag).
 # Creating a release or pushing a vX.Y.Z tag by hand still works. Every other
 # push to main finds the version already published and released, and stops.
-# npm trusted publishing (OIDC) authenticates this workflow; no npm token is stored.
+#
+# npm trusted publishing (OIDC) authenticates this workflow; no npm token is
+# stored. The workflow file name (publish.yml) is what npm trusted publishing
+# is bound to; keep it.
+#
+# The jobs are split so that the dependencies' code never runs with a
+# credential it could misuse:
+#   plan     reads the version and what already exists. No dependency code.
+#   build    runs the dependencies' code (npm ci, typecheck, build) with
+#            read-only access and no npm identity, and hands over a tarball.
+#   publish  holds the npm identity. It publishes the tarball build made, and
+#            runs no install, build or package scripts.
+#   release  holds write access to the repository. No dependency code.
+#   demo     holds the demo's deploy hook. No dependency code.
 
 on:
   push:
@@ -15,24 +28,29 @@ on:
       - "v*"
 
 permissions:
-  contents: write # create the GitHub release and its tag
-  id-token: write # npm trusted publishing
+  contents: read
 
 concurrency:
   group: publish
   cancel-in-progress: false
 
 jobs:
-  publish:
+  plan:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.plan.outputs.version }}
+      tag: ${{ steps.plan.outputs.tag }}
+      publish: ${{ steps.plan.outputs.publish }}
+      create_release: ${{ steps.plan.outputs.create_release }}
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 0
+          persist-credentials: false
       - uses: actions/setup-node@v6
         with:
           node-version: "24"
-          registry-url: "https://registry.npmjs.org"
           package-manager-cache: false
 
       - name: Work out what this push needs
@@ -61,24 +79,81 @@ jobs:
           echo "create_release=$([ "$released" = false ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
           echo "$version: published=$published released=$released"
 
-      - if: steps.plan.outputs.publish == 'true'
-        run: npm ci
-      - if: steps.plan.outputs.publish == 'true'
-        run: npm run typecheck
-      - if: steps.plan.outputs.publish == 'true'
-        run: npm run build
-      - if: steps.plan.outputs.publish == 'true'
-        run: npm publish
+  build:
+    needs: plan
+    if: needs.plan.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - name: Pack the package
+        run: npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP/package"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sdk-package
+          path: ${{ runner.temp }}/package/*.tgz
+          if-no-files-found: error
+          retention-days: 7
 
-      # Released after publishing, so a failed publish leaves no release behind and
-      # the next run retries. The release creates a lightweight tag on the merge
-      # commit, which GitHub signs, so the tag shows as Verified; a tag created by
-      # GITHUB_TOKEN doesn't start another run.
+  publish:
+    needs: [plan, build]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # npm trusted publishing
+    steps:
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: sdk-package
+          path: package
+      - name: Verify the built package is the version being released
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          tarball="package/uniport-sdk-$VERSION.tgz"
+          test "$(ls package | wc -l)" = 1
+          test "$(tar -xzOf "$tarball" package/package.json | node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).version")" = "$VERSION"
+      - name: Publish
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: npm publish "./package/uniport-sdk-$VERSION.tgz" --ignore-scripts
+
+  # Released after publishing, so a failed publish leaves no release behind and
+  # the next run retries. The release creates a lightweight tag on the merge
+  # commit, which GitHub signs, so the tag shows as Verified; a tag created by
+  # GITHUB_TOKEN doesn't start another run.
+  release:
+    needs: [plan, publish]
+    if: >-
+      always() && needs.plan.result == 'success' &&
+      needs.plan.outputs.create_release == 'true' &&
+      (needs.publish.result == 'success' || needs.plan.outputs.publish == 'false')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the GitHub release and its tag
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
       - name: Create the GitHub release
-        if: steps.plan.outputs.create_release == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.plan.outputs.tag }}
+          TAG: ${{ needs.plan.outputs.tag }}
         run: |
           # The commit that set package.json to this version, not necessarily this push's.
           target="$(git log -1 --format=%H -S"\"version\": \"${TAG#v}\"" -- package.json)"
@@ -88,14 +163,19 @@ jobs:
           fi
           gh release create "$TAG" --target "$target" --title "Release ${TAG#v}" --generate-notes --latest
 
-      # Rebuild demo.uniport.dev so it installs the new version (its Vercel build runs
-      # `npm install uniport-sdk@latest`). Enabled by the DEMO_DEPLOY_HOOK repository
-      # secret, a Vercel deploy hook URL for the uniport-demo project.
+  # Rebuild demo.uniport.dev so it installs the new version (its Vercel build runs
+  # `npm install uniport-sdk@latest`). Enabled by the DEMO_DEPLOY_HOOK repository
+  # secret, a Vercel deploy hook URL for the uniport-demo project.
+  demo:
+    needs: [plan, publish]
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
       - name: Redeploy the demo
-        if: steps.plan.outputs.publish == 'true' && env.DEMO_DEPLOY_HOOK != ''
+        if: env.DEMO_DEPLOY_HOOK != ''
         env:
           DEMO_DEPLOY_HOOK: ${{ secrets.DEMO_DEPLOY_HOOK }}
-          VERSION: ${{ steps.plan.outputs.version }}
+          VERSION: ${{ needs.plan.outputs.version }}
         run: |
           # npm can take a few minutes to serve a new version; wait so the demo
           # doesn't rebuild with the previous one.
