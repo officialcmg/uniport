@@ -19,7 +19,7 @@ export interface ResolvedUniportConfig {
 
 /** Default hosted backend URL */
 export const DEFAULT_HOSTED_BACKEND_URL =
-    'https://uniport-backend-production.up.railway.app';
+    'https://api.uniport.dev';
 
 /** Default timeout for backend requests */
 export const DEFAULT_REQUEST_TIMEOUT_MS = 20000;
