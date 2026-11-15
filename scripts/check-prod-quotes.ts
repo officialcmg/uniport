@@ -1,5 +1,5 @@
 /**
- * Sampled chain-pair quote smoke test against the PRODUCTION Railway backend.
+ * Sampled chain-pair quote smoke test against the PRODUCTION backend (api.uniport.dev).
  *
  * Not exhaustive by design — this hits the real hosted backend (rate-limited
  * to 100 req/min) so it samples a representative cross-section instead of
@@ -33,7 +33,7 @@ import {
 } from '../src/core/tokens';
 import { toSmallestUnits } from '../src/core/intents';
 
-const PROD_BACKEND_URL = 'https://uniport-backend-production.up.railway.app';
+const PROD_BACKEND_URL = 'https://api.uniport.dev';
 
 // [origin, destination, human-readable amount in origin token units]
 const PAIRS: [Token, Token, string][] = [
