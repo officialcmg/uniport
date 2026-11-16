@@ -8,7 +8,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useUniportPayment } from '../hooks/useUniportPayment';
 import { CHAINS, getExplorerTxUrl, usesEvmAddress, type ChainId } from '../core/tokens';
 import { UNIPORT_ENS_NAME } from '../core/ens';
-import { formatDisplayAmount } from '../core/intents';
+import { formatDisplayAmount, isAppSetupError, UniportError } from '../core/intents';
 import type { UniportModalProps } from '../types';
 
 // ============================================================================
@@ -241,6 +241,11 @@ function WarningTriangle({ color }: { color: string }) {
 }
 
 function formatPreviewError(error: Error): string {
+    // These already carry a message written for the payer.
+    if (isAppSetupError(error) || (error instanceof UniportError && error.code === 'RATE_LIMITED')) {
+        return error.message;
+    }
+
     if (error.name === 'AbortError') {
         return 'Estimate request was cancelled. Try again.';
     }
@@ -281,6 +286,7 @@ function formatChainLabel(chainId: string): string {
 type ModalStep = 'chain' | 'token' | 'amount';
 
 export function UniportModal({
+    appId,
     open,
     onClose,
     recipient,
@@ -294,7 +300,7 @@ export function UniportModal({
     const t = getTheme(themeMode);
 
     const payment = useUniportPayment({
-        recipient, refundAddress, destinationToken,
+        appId, recipient, refundAddress, destinationToken,
         amount: initialAmount, onSuccess, onError,
     });
 

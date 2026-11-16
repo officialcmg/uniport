@@ -24,15 +24,17 @@ import {
     getUniportDefaultRefundAddress,
     UNIPORT_FALLBACK_REFUND_ADDRESS,
 } from '../core/ens';
-import type { PaymentState } from '../types';
+import type { PaymentState, PaymentSuccess } from '../types';
 
 export interface UseUniportPaymentOptions {
+    /** Your public App ID. Defaults to the one set with configureUniport(). */
+    appId?: string;
     recipient: string;
     refundAddress?: string;
     destinationToken: string;
     /** Exact destination amount; omit to let the payer enter an input amount. */
     amount?: string;
-    onSuccess?: (result: { txHash: string; amount: string }) => void;
+    onSuccess?: (result: PaymentSuccess) => void;
     onError?: (error: Error) => void;
 }
 
@@ -91,6 +93,7 @@ export function useUniportPayment(
     options: UseUniportPaymentOptions
 ): UseUniportPaymentReturn {
     const {
+        appId,
         recipient,
         refundAddress: initialRefundAddress,
         destinationToken,
@@ -205,6 +208,7 @@ export function useUniportPayment(
                         refundTo: nextRefundAddress,
                         swapType,
                         dry: true,
+                        appId,
                         signal: controller.signal,
                     });
                     setPreviewQuote(result);
@@ -226,7 +230,7 @@ export function useUniportPayment(
                 }
             }, 250);
         },
-        [destToken, recipient, swapType]
+        [appId, destToken, recipient, swapType]
     );
 
     const setAmount = useCallback(
@@ -294,6 +298,7 @@ export function useUniportPayment(
                 refundTo: effectiveRefundAddress,
                 swapType,
                 dry: false,
+                appId,
             });
 
             setQuote(result);
@@ -311,6 +316,7 @@ export function useUniportPayment(
         recipient,
         destToken,
         swapType,
+        appId,
         onError,
     ]);
 
@@ -344,6 +350,9 @@ export function useUniportPayment(
                     onSuccess?.({
                         txHash: result.destinationTxHashes?.[0] || '',
                         amount: quote.amountOut,
+                        depositAddress: quote.depositAddress,
+                        depositMemo: quote.memo,
+                        correlationId: quote.correlationId,
                     });
                 } else if (result.isComplete) {
                     setPaymentState('error');

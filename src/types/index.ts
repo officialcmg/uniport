@@ -8,8 +8,28 @@
 // COMPONENT PROPS
 // ============================================================================
 
+/** What onSuccess receives when a payment completes. */
+export interface PaymentSuccess {
+    /** The first destination-chain transaction hash, or '' if none was reported. */
+    txHash: string;
+    /** The quoted amount delivered, in the destination token's smallest units. */
+    amount: string;
+    /**
+     * The payment's deposit address. Send it to your server, which should
+     * confirm the payment with GET https://api.uniport.dev/v1/payments/{depositAddress}
+     * before fulfilling an order.
+     */
+    depositAddress: string;
+    /** The deposit memo, on chains that use one. Pass it as ?memo= when confirming. */
+    depositMemo?: string;
+    /** 1Click's reference for the quote, useful when asking for support. */
+    correlationId: string;
+}
+
 /** Props for the UniportButton component */
 export interface UniportButtonProps {
+    /** Your public App ID from https://uniport.dev/dashboard. Required on deployed sites. */
+    appId?: string;
     /** Recipient address on the destination chain */
     recipient: string;
     /** Optional source-chain refund address to prefill in the modal */
@@ -29,7 +49,7 @@ export interface UniportButtonProps {
     /** Color theme for the modal */
     theme?: 'light' | 'dark';
     /** Callback when payment completes */
-    onSuccess?: (result: { txHash: string; amount: string }) => void;
+    onSuccess?: (result: PaymentSuccess) => void;
     /** Callback when payment fails */
     onError?: (error: Error) => void;
     /** Callback when modal opens/closes */
@@ -38,6 +58,8 @@ export interface UniportButtonProps {
 
 /** Props for the UniportModal component */
 export interface UniportModalProps {
+    /** Your public App ID from https://uniport.dev/dashboard. Required on deployed sites. */
+    appId?: string;
     /** Whether the modal is open */
     open: boolean;
     /** Callback to close the modal */
@@ -53,7 +75,7 @@ export interface UniportModalProps {
     /** Color theme */
     theme?: 'light' | 'dark';
     /** Callback when payment completes */
-    onSuccess?: (result: { txHash: string; amount: string }) => void;
+    onSuccess?: (result: PaymentSuccess) => void;
     /** Callback when payment fails */
     onError?: (error: Error) => void;
 }

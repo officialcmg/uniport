@@ -6,7 +6,7 @@
  */
 
 import { needsMemoDeposit, type Token } from './tokens';
-import { getUniportConfig } from './config';
+import { checkAppId, getUniportConfig } from './config';
 
 // ============================================================================
 // TYPES
@@ -25,6 +25,12 @@ export type UniportErrorCode =
     | 'QUOTE_FAILED'
     | 'DEPOSIT_SUBMISSION_FAILED'
     | 'STATUS_CHECK_FAILED'
+    | 'QUOTE_UNVERIFIED'
+    | 'APP_ID_REQUIRED'
+    | 'APP_NOT_FOUND'
+    | 'ORIGIN_NOT_ALLOWED'
+    | 'RECIPIENT_NOT_ALLOWED'
+    | 'RATE_LIMITED'
     | 'INTERNAL_ERROR'
     | 'REQUEST_TIMEOUT'
     | 'NETWORK_ERROR'
@@ -75,8 +81,8 @@ export interface QuoteOptions {
     deadline?: Date;
     /** Dry run - get quote without creating deposit address */
     dry?: boolean;
-    /** Referral identifier for tracking */
-    referral?: string;
+    /** Your public App ID. Defaults to the one set with configureUniport(). */
+    appId?: string;
     /** Abort signal for cancellation */
     signal?: AbortSignal;
 }
@@ -111,6 +117,22 @@ function extractDetailMessage(details: unknown): string | undefined {
     return undefined;
 }
 
+/**
+ * Errors about how the app is set up. The backend's message is written for the
+ * developer, so it goes to the console; the payer sees a neutral one.
+ */
+const APP_SETUP_CODES: ReadonlySet<string> = new Set([
+    'APP_ID_REQUIRED',
+    'APP_NOT_FOUND',
+    'ORIGIN_NOT_ALLOWED',
+    'RECIPIENT_NOT_ALLOWED',
+]);
+
+/** True for errors caused by the app's Uniport setup, which retrying will not fix. */
+export function isAppSetupError(error: unknown): error is UniportError {
+    return error instanceof UniportError && APP_SETUP_CODES.has(error.code);
+}
+
 function toUniportError(
     body: UniportApiErrorBody,
     fallback: {
@@ -119,6 +141,23 @@ function toUniportError(
         status: number;
     }
 ): UniportError {
+    if (body.code && APP_SETUP_CODES.has(body.code)) {
+        console.error(`Uniport [${body.code}]: ${body.message ?? 'The app is not set up correctly.'}`);
+        return new UniportError({
+            code: body.code,
+            message: 'Payments are not available on this site right now. Please contact the site owner.',
+            details: body.message,
+            status: fallback.status,
+        });
+    }
+    if (fallback.status === 429) {
+        return new UniportError({
+            code: 'RATE_LIMITED',
+            message: 'Too many requests. Please wait a minute and try again.',
+            status: 429,
+        });
+    }
+
     const detailMessage = extractDetailMessage(body.details);
     return new UniportError({
         code: body.code || fallback.code,
@@ -317,6 +356,33 @@ export function formatDisplayAmount(
     }).format(num);
 }
 
+/**
+ * Headers for a POST to the backend. The App ID goes on POSTs only: they
+ * already need a CORS preflight for their JSON body, so the extra header costs
+ * nothing, while a custom header on status polls would add a preflight to each.
+ */
+function postHeaders(appId: string | undefined): Record<string, string> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (appId) headers['X-Uniport-App-Id'] = appId;
+    return headers;
+}
+
+let warnedAboutMissingAppId = false;
+
+/** Says once, in the console, that a deployed site needs an App ID. */
+function warnIfAppIdMissing(appId: string | undefined): void {
+    if (appId || warnedAboutMissingAppId || typeof window === 'undefined') return;
+    const host = window.location?.hostname ?? '';
+    const local =
+        host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || host.endsWith('.localhost');
+    if (local) return;
+    warnedAboutMissingAppId = true;
+    console.warn(
+        'Uniport: no appId is set. Without one the SDK only works on localhost. ' +
+        'Create an App ID at https://uniport.dev/dashboard and pass it as the appId prop.'
+    );
+}
+
 // ============================================================================
 // CORE SERVICE FUNCTIONS
 // ============================================================================
@@ -335,7 +401,6 @@ export async function getQuote(options: QuoteOptions): Promise<QuoteResult> {
         swapType = 'EXACT_INPUT',
         deadline,
         dry = false,
-        referral = 'uniport',
         signal,
     } = options;
 
@@ -346,7 +411,9 @@ export async function getQuote(options: QuoteOptions): Promise<QuoteResult> {
             : originToken.decimals
     );
 
-    const { backendUrl, requestTimeoutMs } = getUniportConfig();
+    const { backendUrl, requestTimeoutMs, appId: configuredAppId } = getUniportConfig();
+    const appId = checkAppId(options.appId) ?? configuredAppId;
+    warnIfAppIdMissing(appId);
     const { signal: requestSignal, cleanup, didTimeout } = createTimeoutSignal(
         requestTimeoutMs,
         signal
@@ -357,7 +424,7 @@ export async function getQuote(options: QuoteOptions): Promise<QuoteResult> {
     try {
         response = await fetch(`${backendUrl}/api/quote`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: postHeaders(appId),
             signal: requestSignal,
             body: JSON.stringify({
                 dry,
@@ -370,7 +437,6 @@ export async function getQuote(options: QuoteOptions): Promise<QuoteResult> {
                 refundTo,
                 recipient,
                 deadline: deadline?.toISOString() || generateDeadline(1),
-                referral,
             }),
         });
     } catch (error) {
@@ -453,7 +519,7 @@ export async function submitDepositTx(params: {
     try {
         response = await fetch(`${backendUrl}/api/deposit`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: postHeaders(getUniportConfig().appId),
             signal,
             body: JSON.stringify(params),
         });
