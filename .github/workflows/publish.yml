@@ -7,8 +7,8 @@ name: Publish SDK
 # push to main finds the version already published and released, and stops.
 #
 # npm trusted publishing (OIDC) authenticates this workflow; no npm token is
-# stored. The workflow file name (publish.yml) is what npm trusted publishing
-# is bound to; keep it.
+# stored. npm trusts this repository, the workflow file name (publish.yml) and
+# the npm-publish environment; keep all three.
 #
 # The jobs are split so that the dependencies' code never runs with a
 # credential it could misuse:
@@ -113,6 +113,10 @@ jobs:
   publish:
     needs: [plan, build]
     runs-on: ubuntu-latest
+    # npm's trusted publisher for uniport-sdk names this environment, so a job
+    # without it cannot publish. Restrict the environment to main and v* tags in
+    # the repository settings, so no other branch can use the npm identity.
+    environment: npm-publish
     permissions:
       id-token: write # npm trusted publishing
     steps:
