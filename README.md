@@ -60,6 +60,7 @@ When `amount` is set, the payer can't change it in the modal.
 const res = await fetch(
   `https://api.uniport.dev/v1/payments/${encodeURIComponent(depositAddress)}`
 )
+if (!res.ok) throw new Error('Try again shortly')
 const payment = await res.json()
 
 const paid =
@@ -71,7 +72,7 @@ const paid =
   BigInt(payment.amountOut) >= EXPECTED_AMOUNT
 ```
 
-`amountOut` is `null` until the payment is delivered. If `record` is `unavailable`, Uniport could not read its record just now, so `appId` is `null`: ask again shortly. Also record each `depositAddress` you accept, so the same payment cannot be used for two orders. Add `?memo=` with `depositMemo` on chains that use a memo. No secret is needed for this call.
+`amountOut` is `null` until the payment is delivered. If `record` is `unavailable`, Uniport could not read its record just now, so `appId` is `null`: ask again shortly. Also record each payment you accept, so it cannot be used for two orders: store `payment.depositAddress` and `payment.depositMemo` from the response, not the values the browser sent, because the same address can be written in more than one way. Add `?memo=` with `depositMemo` on chains that use a memo. No secret is needed for this call.
 
 When `amount` is supplied, the modal requests that exact destination amount and rounds the quoted input upward only when the increase is at most 0.25%. Rounded surplus and failed-swap refunds are credited to Uniport's configured Intents account. When `amount` is omitted, the payer enters an exact input amount and receives the quoted output.
 
