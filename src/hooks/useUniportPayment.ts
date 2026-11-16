@@ -169,6 +169,9 @@ export function useUniportPayment(
         callbacksRef.current = { onSuccess, onError };
     });
     const pollPausedUntilRef = useRef(0);
+    // Goes up each time polling stops, so a reply still in flight for a payment
+    // that was cancelled or reset is recognised and dropped.
+    const pollGenerationRef = useRef(0);
     const lastStatusRef = useRef<ExecutionStatus | null>(null);
     const previewDebounceRef = useRef<NodeJS.Timeout | null>(null);
     const previewAbortRef = useRef<AbortController | null>(null);
@@ -333,6 +336,7 @@ export function useUniportPayment(
 
     // Stop polling
     const stopPolling = useCallback(() => {
+        pollGenerationRef.current += 1;
         if (pollingRef.current) {
             clearInterval(pollingRef.current);
             pollingRef.current = null;
@@ -343,12 +347,14 @@ export function useUniportPayment(
     const pollStatus = useCallback(async () => {
         if (!quote?.depositAddress) return;
         if (Date.now() < pollPausedUntilRef.current) return;
+        const generation = pollGenerationRef.current;
 
         try {
             const result = await getExecutionStatus(
                 quote.depositAddress,
                 quote.memo
             );
+            if (generation !== pollGenerationRef.current) return;
             setStatus(result);
 
             if (result.status !== lastStatusRef.current) {
@@ -379,6 +385,7 @@ export function useUniportPayment(
                 }
             }
         } catch (err) {
+            if (generation !== pollGenerationRef.current) return;
             // Asked to slow down: leave the status alone for half a minute.
             if (isRateLimitError(err)) pollPausedUntilRef.current = Date.now() + 30_000;
             console.error('Status poll error:', err);

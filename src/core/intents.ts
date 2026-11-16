@@ -518,11 +518,13 @@ export async function getQuote(options: QuoteOptions): Promise<QuoteResult> {
 /**
  * Submit a deposit transaction hash to speed up processing
  */
-export async function submitDepositTx(params: {
+export async function submitDepositTx({ appId, ...body }: {
     txHash: string;
     depositAddress: string;
     memo?: string;
     nearSenderAccount?: string;
+    /** Overrides the App ID set with configureUniport. Sent as a header, not in the body. */
+    appId?: string;
 }): Promise<void> {
     const { backendUrl, requestTimeoutMs } = getUniportConfig();
     const { signal, cleanup } = createTimeoutSignal(requestTimeoutMs);
@@ -532,9 +534,9 @@ export async function submitDepositTx(params: {
     try {
         response = await fetch(`${backendUrl}/api/deposit`, {
             method: 'POST',
-            headers: postHeaders(getUniportConfig().appId),
+            headers: postHeaders(checkAppId(appId) ?? getUniportConfig().appId),
             signal,
-            body: JSON.stringify(params),
+            body: JSON.stringify(body),
         });
     } catch (error) {
         cleanup();

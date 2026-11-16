@@ -67,6 +67,7 @@ const paid =
   payment.status === 'SUCCESS' &&
   payment.amountOut !== null &&
   payment.appId === process.env.UNIPORT_APP_ID &&
+  // EVM (0x) addresses only. On other chains, such as Solana, compare exactly.
   payment.recipient.toLowerCase() === MY_WALLET.toLowerCase() &&
   payment.destinationAsset === EXPECTED_ASSET_ID &&
   BigInt(payment.amountOut) >= EXPECTED_AMOUNT
