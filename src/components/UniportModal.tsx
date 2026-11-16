@@ -240,6 +240,27 @@ function WarningTriangle({ color }: { color: string }) {
     );
 }
 
+function SearchIcon({ color }: { color: string }) {
+    return (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+            <circle cx="11" cy="11" r="7" stroke={color} strokeWidth="2" />
+            <path d="M20 20l-3.5-3.5" stroke={color} strokeWidth="2" strokeLinecap="round" />
+        </svg>
+    );
+}
+
+/** The Uniport mark, drawn in whatever colour the text around it has. */
+function UniportMark({ size = 12 }: { size?: number }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 1560 1560" fill="currentColor" aria-hidden="true" style={{ flexShrink: 0 }}>
+            <path d="M805.4 1558.5C840.4 1553.9 873.3 1539.7 901.1 1517.1C905.2 1513.8 1045.5 1374 1213 1206.3C1444.7 974.5 1519 899.6 1523.2 893.5C1548.3 857.8 1560 821.6 1560 780C1560 735.3 1545.2 693.3 1517.2 659C1513.9 654.9 1435.7 576.1 1343.6 484L1176 316.5L1062.7 430C985 507.8 946.2 547.4 939.2 556C887 619.8 860.4 679.1 846 763.9C843.5 778.6 840 805.9 835.5 845.5C829.7 896.7 825.3 923.7 818.5 951C802 1017.1 775.1 1068.6 728 1124.1C722.3 1130.9 668.1 1186.1 607.6 1246.8L497.5 1357L574.5 1434.1C616.9 1476.5 654.8 1513.8 658.9 1517.1C688.1 1540.8 720.9 1554.5 760.5 1559.3C768.7 1560.3 795.1 1559.8 805.4 1558.5ZM496.6 1130.8C558.2 1069 612.3 1014.2 616.7 1009C665.3 951.5 693.9 893.5 709 822.1C714.5 796.1 717.8 773.6 724.5 714.5C730.5 661.5 734.6 636.8 742.1 606.6C757.8 543.3 786.8 488.5 833.1 434.5C838.8 427.9 892.7 373.1 952.9 312.7L1062.5 203L985.5 125.9C943.1 83.5 905.2 46.2 901.1 42.9C866.2 14.6 824.9 -0 779.7 0C738 0.1 702.3 11.7 666.5 36.8C660.4 41.1 585.5 115.3 353.7 347C186 514.5 46.2 654.8 42.9 658.9C14.6 693.8 -0 735.1 0 780.3C0.1 822 11.7 857.8 36.8 893.5C41 899.5 85.2 944.4 212.9 1072.2C306.7 1166.2 383.7 1243 384 1243C384.3 1243 435 1192.5 496.6 1130.8Z" />
+        </svg>
+    );
+}
+
+/** Lists longer than this get a search box. */
+const SEARCH_THRESHOLD = 8;
+
 function formatPreviewError(error: Error): string {
     // These already carry a message written for the payer.
     if (isAppSetupError(error) || isRateLimitError(error)) {
@@ -307,6 +328,8 @@ export function UniportModal({
     const [modalStep, setModalStep] = useState<ModalStep>('chain');
     const [copiedField, setCopiedField] = useState<'address' | 'memo' | null>(null);
     const [showReceipt, setShowReceipt] = useState(false);
+    const [chainQuery, setChainQuery] = useState('');
+    const [tokenQuery, setTokenQuery] = useState('');
 
     // Portal target — resolved once on mount, never changes
     const [portalRoot, setPortalRoot] = useState<Element | null>(null);
@@ -325,6 +348,8 @@ export function UniportModal({
         payment.reset();
         setModalStep('chain');
         setShowReceipt(false);
+        setChainQuery('');
+        setTokenQuery('');
         onClose();
     }, [payment, onClose]);
 
@@ -429,20 +454,83 @@ export function UniportModal({
         </div>
     );
 
+    // ── Search box ────────────────────────────────────────────────────────────
+
+    const renderSearch = (value: string, onChange: (value: string) => void, label: string) => (
+        <div style={{ padding: '0 18px 10px' }}>
+            <div style={{
+                display: 'flex', alignItems: 'center', gap: '9px',
+                padding: '0 12px', height: 40,
+                background: t.inputBg, borderRadius: '10px',
+            }}>
+                <SearchIcon color={t.textMuted} />
+                <input
+                    type="text"
+                    inputMode="search"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    aria-label={label}
+                    placeholder={label}
+                    value={value}
+                    onChange={e => onChange(e.target.value)}
+                    // Set inline so a host page's focus styles (rings, coloured
+                    // borders) don't show on this input.
+                    style={{
+                        flex: 1, minWidth: 0, height: '100%',
+                        background: 'transparent', border: 'none',
+                        outline: 'none', boxShadow: 'none',
+                        // 16px keeps iOS from zooming the page on focus.
+                        fontSize: '16px', color: t.text, fontFamily: 'inherit',
+                        padding: 0, margin: 0, borderRadius: 0,
+                        WebkitAppearance: 'none', appearance: 'none',
+                    }}
+                />
+                {value && (
+                    <button type="button" aria-label="Clear search" onClick={() => onChange('')}
+                        style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            width: 22, height: 22, borderRadius: '50%', padding: 0,
+                            border: 'none', background: 'transparent', cursor: 'pointer',
+                        }}>
+                        <XMark color={t.textMuted} />
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+
+    const plainList: React.CSSProperties = { overflowY: 'auto', maxHeight: 420 };
+    // A steady height while searching, so the modal doesn't jump as results narrow.
+    const searchableList: React.CSSProperties = { overflowY: 'auto', height: 'min(420px, 52vh)' };
+
+    const renderNoMatches = (what: string, query: string) => (
+        <p style={{ margin: 0, padding: '28px 20px', textAlign: 'center', fontSize: '14px', color: t.textMuted }}>
+            No {what} match “{query.trim()}”.
+        </p>
+    );
+
+    const matches = (text: string, query: string) =>
+        text.toLowerCase().includes(query.trim().toLowerCase());
+
     // ── Chain step ────────────────────────────────────────────────────────────
 
-    const renderChainStep = () => (
+    const renderChainStep = () => {
+        const chains = payment.chains.filter(chain => matches(chain.name, chainQuery));
+        return (
         <>
             {renderHeader('Select network')}
-            <div style={{ overflowY: 'auto', maxHeight: 420 }}>
-                {payment.chains.map((chain, i) => (
+            {payment.chains.length > SEARCH_THRESHOLD && renderSearch(chainQuery, setChainQuery, 'Search networks')}
+            <div style={payment.chains.length > SEARCH_THRESHOLD ? searchableList : plainList}>
+                {chains.length === 0 && renderNoMatches('networks', chainQuery)}
+                {chains.map((chain, i) => (
                     <button key={chain.id}
-                        onClick={() => { payment.setSelectedChain(chain); setModalStep('token'); }}
+                        onClick={() => { payment.setSelectedChain(chain); setTokenQuery(''); setModalStep('token'); }}
                         style={{
                             display: 'flex', alignItems: 'center', gap: '14px',
                             width: '100%', padding: '13px 20px',
                             background: 'transparent', border: 'none',
-                            borderBottom: i < payment.chains.length - 1 ? `1px solid ${t.border}` : 'none',
+                            borderBottom: i < chains.length - 1 ? `1px solid ${t.border}` : 'none',
                             cursor: 'pointer', textAlign: 'left',
                             transition: 'background 0.1s', fontFamily: 'inherit',
                         }}
@@ -458,22 +546,27 @@ export function UniportModal({
                 ))}
             </div>
         </>
-    );
+        );
+    };
 
     // ── Token step ────────────────────────────────────────────────────────────
 
-    const renderTokenStep = () => (
+    const renderTokenStep = () => {
+        const tokens = payment.tokens.filter(token => matches(token.symbol, tokenQuery));
+        return (
         <>
             {renderHeader('Select token')}
-            <div style={{ overflowY: 'auto', maxHeight: 420 }}>
-                {payment.tokens.map((token, i) => (
+            {payment.tokens.length > SEARCH_THRESHOLD && renderSearch(tokenQuery, setTokenQuery, 'Search tokens')}
+            <div style={payment.tokens.length > SEARCH_THRESHOLD ? searchableList : plainList}>
+                {tokens.length === 0 && renderNoMatches('tokens', tokenQuery)}
+                {tokens.map((token, i) => (
                     <button key={token.assetId}
                         onClick={() => { payment.setSelectedToken(token); setModalStep('amount'); }}
                         style={{
                             display: 'flex', alignItems: 'center', gap: '14px',
                             width: '100%', padding: '13px 20px',
                             background: 'transparent', border: 'none',
-                            borderBottom: i < payment.tokens.length - 1 ? `1px solid ${t.border}` : 'none',
+                            borderBottom: i < tokens.length - 1 ? `1px solid ${t.border}` : 'none',
                             cursor: 'pointer', textAlign: 'left',
                             transition: 'background 0.1s', fontFamily: 'inherit',
                         }}
@@ -491,7 +584,8 @@ export function UniportModal({
                 ))}
             </div>
         </>
-    );
+        );
+    };
 
     // ── Amount step ───────────────────────────────────────────────────────────
 
@@ -1019,6 +1113,24 @@ export function UniportModal({
                 }}
             >
                 {renderContent()}
+                <a
+                    href="https://uniport.dev"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                        flexShrink: 0, padding: '11px 16px 13px',
+                        borderTop: `1px solid ${t.border}`,
+                        fontSize: '12px', fontWeight: 500, lineHeight: 1,
+                        color: t.textMuted, textDecoration: 'none',
+                    }}
+                >
+                    Powered by
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: t.textSecondary, fontWeight: 600 }}>
+                        <UniportMark size={12} />
+                        Uniport
+                    </span>
+                </a>
             </div>
         </div>,
         portalRoot
