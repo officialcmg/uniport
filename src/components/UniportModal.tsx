@@ -371,6 +371,15 @@ export function UniportModal({
         if (ok) { setCopiedField(field); setTimeout(() => setCopiedField(null), 2000); }
     }, [payment]);
 
+    // A parent can close the modal by setting open to false without going
+    // through handleClose; the search text must not survive that either.
+    useEffect(() => {
+        if (!open) {
+            setChainQuery('');
+            setTokenQuery('');
+        }
+    }, [open]);
+
     if (!open || !portalRoot) return null;
 
     // Derived state
@@ -1119,8 +1128,7 @@ export function UniportModal({
                     rel="noopener noreferrer"
                     style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                        flexShrink: 0, padding: '11px 16px 13px',
-                        borderTop: `1px solid ${t.border}`,
+                        flexShrink: 0, padding: '10px 16px 14px',
                         fontSize: '12px', fontWeight: 500, lineHeight: 1,
                         color: t.textMuted, textDecoration: 'none',
                     }}
