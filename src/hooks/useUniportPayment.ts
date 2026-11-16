@@ -12,7 +12,9 @@ import {
     type StatusResult,
     type ExecutionStatus,
     type SwapType,
+    isRateLimitError,
 } from '../core/intents';
+import { checkAppId } from '../core/config';
 import {
     getSupportedChains,
     getToken,
@@ -104,6 +106,9 @@ export function useUniportPayment(
     const swapType: Extract<SwapType, 'EXACT_INPUT' | 'EXACT_OUTPUT'> =
         initialAmount === undefined ? 'EXACT_INPUT' : 'EXACT_OUTPUT';
 
+    // Throws straight away if a secret key was passed, where the developer sees it.
+    checkAppId(appId);
+
     // Get destination token by name string
     const destToken = getToken(destinationToken);
     if (!destToken) {
@@ -158,6 +163,12 @@ export function useUniportPayment(
 
     // Refs
     const pollingRef = useRef<NodeJS.Timeout | null>(null);
+    // The poll timer outlives renders, so it reads the latest callbacks from here.
+    const callbacksRef = useRef({ onSuccess, onError });
+    useEffect(() => {
+        callbacksRef.current = { onSuccess, onError };
+    });
+    const pollPausedUntilRef = useRef(0);
     const lastStatusRef = useRef<ExecutionStatus | null>(null);
     const previewDebounceRef = useRef<NodeJS.Timeout | null>(null);
     const previewAbortRef = useRef<AbortController | null>(null);
@@ -331,6 +342,7 @@ export function useUniportPayment(
     // Poll for status
     const pollStatus = useCallback(async () => {
         if (!quote?.depositAddress) return;
+        if (Date.now() < pollPausedUntilRef.current) return;
 
         try {
             const result = await getExecutionStatus(
@@ -347,7 +359,7 @@ export function useUniportPayment(
                 } else if (result.isSuccess) {
                     setPaymentState('success');
                     stopPolling();
-                    onSuccess?.({
+                    callbacksRef.current.onSuccess?.({
                         txHash: result.destinationTxHashes?.[0] || '',
                         amount: quote.amountOut,
                         depositAddress: quote.depositAddress,
@@ -363,13 +375,15 @@ export function useUniportPayment(
                             : 'Payment failed'
                     );
                     setError(err);
-                    onError?.(err);
+                    callbacksRef.current.onError?.(err);
                 }
             }
         } catch (err) {
+            // Asked to slow down: leave the status alone for half a minute.
+            if (isRateLimitError(err)) pollPausedUntilRef.current = Date.now() + 30_000;
             console.error('Status poll error:', err);
         }
-    }, [quote, onSuccess, onError, stopPolling]);
+    }, [quote, stopPolling]);
 
     // Start polling
     const startPolling = useCallback(() => {

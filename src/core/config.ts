@@ -33,6 +33,22 @@ export const DEFAULT_REQUEST_TIMEOUT_MS = 20000;
 
 const APP_ID_FORMAT = /^app_[0-9A-Za-z]{22}$/;
 
+interface ConfigStore {
+    appId?: string;
+    backendUrl?: string;
+    requestTimeoutMs?: number;
+    warnedAppIds: Set<string>;
+}
+
+/**
+ * The package ships three entry points ('uniport-sdk', '/core', '/components'),
+ * each bundled on its own. The settings live on globalThis so that a value set
+ * through one entry point is seen by the others.
+ */
+const STORE_KEY = Symbol.for('uniport-sdk.config');
+const globalStore = globalThis as typeof globalThis & { [STORE_KEY]?: ConfigStore };
+const store: ConfigStore = (globalStore[STORE_KEY] ??= { warnedAppIds: new Set() });
+
 /**
  * Checks a value before it is used as an App ID. A secret key must never reach
  * the browser, so one is refused outright; anything else that does not look
@@ -47,7 +63,8 @@ export function checkAppId(appId: string | undefined): string | undefined {
             'use the public App ID (app_...) from https://uniport.dev/dashboard.'
         );
     }
-    if (!APP_ID_FORMAT.test(value)) {
+    if (!APP_ID_FORMAT.test(value) && !store.warnedAppIds.has(value)) {
+        store.warnedAppIds.add(value);
         console.warn(
             `Uniport: "${value}" does not look like an App ID (app_ followed by 22 characters). ` +
             'Copy it from https://uniport.dev/dashboard.'
@@ -56,27 +73,23 @@ export function checkAppId(appId: string | undefined): string | undefined {
     return value;
 }
 
-let configuredAppId: string | undefined;
-let configuredBackendUrl: string | undefined;
-let configuredRequestTimeoutMs: number | undefined;
-
 function normalizeBackendUrl(url: string): string {
     return url.replace(/\/+$/, '');
 }
 
 export function configureUniport(config: UniportConfig): void {
     if (config.appId !== undefined) {
-        configuredAppId = checkAppId(config.appId);
+        store.appId = checkAppId(config.appId);
     }
 
     if (config.backendUrl !== undefined) {
-        configuredBackendUrl = config.backendUrl
+        store.backendUrl = config.backendUrl
             ? normalizeBackendUrl(config.backendUrl)
             : undefined;
     }
 
     if (config.requestTimeoutMs !== undefined) {
-        configuredRequestTimeoutMs =
+        store.requestTimeoutMs =
             config.requestTimeoutMs > 0
                 ? config.requestTimeoutMs
                 : DEFAULT_REQUEST_TIMEOUT_MS;
@@ -85,13 +98,13 @@ export function configureUniport(config: UniportConfig): void {
 
 export function getUniportConfig(): ResolvedUniportConfig {
     const backendUrl =
-        configuredBackendUrl ||
+        store.backendUrl ||
         DEFAULT_HOSTED_BACKEND_URL;
 
     return {
-        appId: configuredAppId,
+        appId: store.appId,
         backendUrl: normalizeBackendUrl(backendUrl),
         requestTimeoutMs:
-            configuredRequestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS,
+            store.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS,
     };
 }

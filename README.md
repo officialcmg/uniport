@@ -26,7 +26,7 @@ import { UniportButton } from 'uniport-sdk'
 />
 ```
 
-Get your `appId` at [uniport.dev/dashboard](https://uniport.dev/dashboard): create an app and add the websites it runs on. The App ID is public, so it is safe in browser code; what it controls is which sites may use it. Without one the SDK works on `localhost` only, which is enough to try it out.
+Get your `appId` at [uniport.dev/dashboard](https://uniport.dev/dashboard): create an app and add the websites it runs on. The App ID is public, so it is safe in browser code; what it controls is which sites may use it. On `localhost` the SDK works without one, which is enough to try it out. Deployed sites need one.
 
 The SDK uses Uniport's hosted backend. No secret key or backend of your own is needed.
 
@@ -44,7 +44,7 @@ The SDK uses Uniport's hosted backend. No secret key or backend of your own is n
 | `disabled` | `boolean` | No | Disable the button |
 | `className` | `string` | No | Custom CSS class |
 | `theme` | `'light' \| 'dark'` | No | Modal theme |
-| `onSuccess` | `(result) => void` | No | Called when payment completes |
+| `onSuccess` | `(result) => void` | No | Called when payment completes, with `{ txHash, amount, depositAddress, depositMemo, correlationId }` |
 | `onError` | `(error) => void` | No | Called when payment fails |
 | `onOpenChange` | `(open) => void` | No | Called when modal opens or closes |
 
@@ -57,18 +57,21 @@ When `amount` is set, the payer can't change it in the modal.
 `onSuccess` receives `{ txHash, amount, depositAddress, depositMemo, correlationId }`. It runs in the payer's browser, so do not grant goods or access on its word alone. Send `depositAddress` to your server and have it check the payment:
 
 ```ts
-const res = await fetch(`https://api.uniport.dev/v1/payments/${depositAddress}`)
+const res = await fetch(
+  `https://api.uniport.dev/v1/payments/${encodeURIComponent(depositAddress)}`
+)
 const payment = await res.json()
 
 const paid =
   payment.status === 'SUCCESS' &&
+  payment.amountOut !== null &&
   payment.appId === process.env.UNIPORT_APP_ID &&
   payment.recipient.toLowerCase() === MY_WALLET.toLowerCase() &&
   payment.destinationAsset === EXPECTED_ASSET_ID &&
   BigInt(payment.amountOut) >= EXPECTED_AMOUNT
 ```
 
-Also record each `depositAddress` you accept, so the same payment cannot be used for two orders. Add `?memo=` with `depositMemo` on chains that use a memo. No secret is needed for this call.
+`amountOut` is `null` until the payment is delivered. If `record` is `unavailable`, Uniport could not read its record just now, so `appId` is `null`: ask again shortly. Also record each `depositAddress` you accept, so the same payment cannot be used for two orders. Add `?memo=` with `depositMemo` on chains that use a memo. No secret is needed for this call.
 
 When `amount` is supplied, the modal requests that exact destination amount and rounds the quoted input upward only when the increase is at most 0.25%. Rounded surplus and failed-swap refunds are credited to Uniport's configured Intents account. When `amount` is omitted, the payer enters an exact input amount and receives the quoted output.
 

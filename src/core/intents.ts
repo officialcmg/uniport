@@ -130,7 +130,20 @@ const APP_SETUP_CODES: ReadonlySet<string> = new Set([
 
 /** True for errors caused by the app's Uniport setup, which retrying will not fix. */
 export function isAppSetupError(error: unknown): error is UniportError {
-    return error instanceof UniportError && APP_SETUP_CODES.has(error.code);
+    return APP_SETUP_CODES.has(errorCode(error) ?? '');
+}
+
+/** True when the backend refused a request because too many were sent. */
+export function isRateLimitError(error: unknown): error is UniportError {
+    return errorCode(error) === 'RATE_LIMITED';
+}
+
+// Read the code rather than use instanceof: each entry point of the package is
+// bundled with its own copy of the UniportError class.
+function errorCode(error: unknown): string | undefined {
+    if (typeof error !== 'object' || error === null) return undefined;
+    const code = (error as { code?: unknown }).code;
+    return typeof code === 'string' ? code : undefined;
 }
 
 function toUniportError(

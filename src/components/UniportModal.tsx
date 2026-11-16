@@ -8,7 +8,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useUniportPayment } from '../hooks/useUniportPayment';
 import { CHAINS, getExplorerTxUrl, usesEvmAddress, type ChainId } from '../core/tokens';
 import { UNIPORT_ENS_NAME } from '../core/ens';
-import { formatDisplayAmount, isAppSetupError, UniportError } from '../core/intents';
+import { formatDisplayAmount, isAppSetupError, isRateLimitError } from '../core/intents';
 import type { UniportModalProps } from '../types';
 
 // ============================================================================
@@ -242,7 +242,7 @@ function WarningTriangle({ color }: { color: string }) {
 
 function formatPreviewError(error: Error): string {
     // These already carry a message written for the payer.
-    if (isAppSetupError(error) || (error instanceof UniportError && error.code === 'RATE_LIMITED')) {
+    if (isAppSetupError(error) || isRateLimitError(error)) {
         return error.message;
     }
 
