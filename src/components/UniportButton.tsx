@@ -130,6 +130,7 @@ function getButtonStyle(
 }
 
 export function UniportButton({
+    appId,
     recipient,
     refundAddress,
     destinationToken,
@@ -173,6 +174,7 @@ export function UniportButton({
             </button>
 
             <UniportModal
+                appId={appId}
                 open={isOpen}
                 onClose={handleClose}
                 recipient={recipient}

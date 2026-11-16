@@ -19,18 +19,22 @@ npm install uniport-sdk
 import { UniportButton } from 'uniport-sdk'
 
 <UniportButton
+  appId="app_..."
   recipient="0x..."
   destinationToken="arbitrumUSDC"
-  onSuccess={(result) => console.log('Paid', result.txHash)}
+  onSuccess={(result) => console.log('Paid', result.depositAddress)}
 />
 ```
 
-The SDK uses Uniport's hosted backend. No API key or backend URL is required for standard integration.
+Get your `appId` at [uniport.dev/dashboard](https://uniport.dev/dashboard): create an app and add the websites it runs on. The App ID is public, so it is safe in browser code; what it controls is which sites may use it. On `localhost` the SDK works without one, which is enough to try it out. Deployed sites need one.
+
+The SDK uses Uniport's hosted backend. No secret key or backend of your own is needed.
 
 ## UniportButton Props
 
 | Prop | Type | Required | Description |
 |------|------|----------|-------------|
+| `appId` | `string` | On deployed sites | Your public App ID from the dashboard. Optional on `localhost`. Can also be set once with `configureUniport({ appId })` |
 | `recipient` | `string` | Yes | Recipient wallet address on the destination chain |
 | `destinationToken` | `string` | Yes | Destination token name from the supported token table |
 | `amount` | `string` | No | Exact destination amount. If omitted, the payer enters an input amount in the modal |
@@ -40,13 +44,36 @@ The SDK uses Uniport's hosted backend. No API key or backend URL is required for
 | `disabled` | `boolean` | No | Disable the button |
 | `className` | `string` | No | Custom CSS class |
 | `theme` | `'light' \| 'dark'` | No | Modal theme |
-| `onSuccess` | `(result) => void` | No | Called when payment completes |
+| `onSuccess` | `(result) => void` | No | Called when payment completes, with `{ txHash, amount, depositAddress, depositMemo, correlationId }` |
 | `onError` | `(error) => void` | No | Called when payment fails |
 | `onOpenChange` | `(open) => void` | No | Called when modal opens or closes |
 
 If `refundAddress` is omitted, the payer can enter it inside the modal. The refund address is on the source chain the payer sends from.
 
-When `amount` is set, the payer can't change it in the modal. `onSuccess` runs in the payer's browser, so before granting goods or access, confirm on your server that the recipient received the amount.
+When `amount` is set, the payer can't change it in the modal.
+
+## Confirming a payment
+
+`onSuccess` receives `{ txHash, amount, depositAddress, depositMemo, correlationId }`. It runs in the payer's browser, so do not grant goods or access on its word alone. Send `depositAddress` to your server and have it check the payment:
+
+```ts
+const res = await fetch(
+  `https://api.uniport.dev/v1/payments/${encodeURIComponent(depositAddress)}`
+)
+if (!res.ok) throw new Error('Try again shortly')
+const payment = await res.json()
+
+const paid =
+  payment.status === 'SUCCESS' &&
+  payment.amountOut !== null &&
+  payment.appId === process.env.UNIPORT_APP_ID &&
+  // EVM (0x) addresses only. On other chains, such as Solana, compare exactly.
+  payment.recipient.toLowerCase() === MY_WALLET.toLowerCase() &&
+  payment.destinationAsset === EXPECTED_ASSET_ID &&
+  BigInt(payment.amountOut) >= EXPECTED_AMOUNT
+```
+
+`amountOut` is `null` until the payment is delivered. If `record` is `unavailable`, Uniport could not read its record just now, so `appId` is `null`: ask again shortly. Also record each payment you accept, so it cannot be used for two orders: store `payment.depositAddress` and `payment.depositMemo` from the response, not the values the browser sent, because the same address can be written in more than one way. Add `?memo=` with `depositMemo` on chains that use a memo. No secret is needed for this call.
 
 When `amount` is supplied, the modal requests that exact destination amount and rounds the quoted input upward only when the increase is at most 0.25%. Rounded surplus and failed-swap refunds are credited to Uniport's configured Intents account. When `amount` is omitted, the payer enters an exact input amount and receives the quoted output.
 
@@ -198,6 +225,7 @@ The package exports:
 - `UniportButton`
 - `UniportModal`
 - `useUniportPayment`
+- `configureUniport` — set `appId` once for the core functions
 - `getQuote`
 - `submitDepositTx`
 - `getExecutionStatus`
@@ -212,6 +240,17 @@ The package exports:
 ## Errors
 
 Backend request failures are surfaced as typed `UniportError` instances from the core module. Timeouts, quote failures, deposit submission failures, and status failures are normalized by the SDK before they reach your UI.
+
+Four codes mean the app's setup needs fixing. The payer sees a neutral message, and the reason is logged to the browser console:
+
+| Code | Meaning | Fix |
+|------|---------|-----|
+| `APP_ID_REQUIRED` | The site is not `localhost` and no `appId` was passed | Create an app in the dashboard and pass its ID |
+| `APP_NOT_FOUND` | The App ID is unknown, mistyped or disabled | Copy it again from the dashboard |
+| `ORIGIN_NOT_ALLOWED` | The App ID is being used on a site that is not on its list | Add the site to the app's allowed origins |
+| `RECIPIENT_NOT_ALLOWED` | The app only accepts payments to listed addresses, and `recipient` is not one | Use a listed address, or change the list |
+
+`RATE_LIMITED` means too many requests in a short time; the payer is asked to wait a minute.
 
 ## License
 

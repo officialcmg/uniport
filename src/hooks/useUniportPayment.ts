@@ -12,7 +12,9 @@ import {
     type StatusResult,
     type ExecutionStatus,
     type SwapType,
+    isRateLimitError,
 } from '../core/intents';
+import { checkAppId } from '../core/config';
 import {
     getSupportedChains,
     getToken,
@@ -24,15 +26,17 @@ import {
     getUniportDefaultRefundAddress,
     UNIPORT_FALLBACK_REFUND_ADDRESS,
 } from '../core/ens';
-import type { PaymentState } from '../types';
+import type { PaymentState, PaymentSuccess } from '../types';
 
 export interface UseUniportPaymentOptions {
+    /** Your public App ID. Defaults to the one set with configureUniport(). */
+    appId?: string;
     recipient: string;
     refundAddress?: string;
     destinationToken: string;
     /** Exact destination amount; omit to let the payer enter an input amount. */
     amount?: string;
-    onSuccess?: (result: { txHash: string; amount: string }) => void;
+    onSuccess?: (result: PaymentSuccess) => void;
     onError?: (error: Error) => void;
 }
 
@@ -91,6 +95,7 @@ export function useUniportPayment(
     options: UseUniportPaymentOptions
 ): UseUniportPaymentReturn {
     const {
+        appId,
         recipient,
         refundAddress: initialRefundAddress,
         destinationToken,
@@ -100,6 +105,9 @@ export function useUniportPayment(
     } = options;
     const swapType: Extract<SwapType, 'EXACT_INPUT' | 'EXACT_OUTPUT'> =
         initialAmount === undefined ? 'EXACT_INPUT' : 'EXACT_OUTPUT';
+
+    // Throws straight away if a secret key was passed, where the developer sees it.
+    checkAppId(appId);
 
     // Get destination token by name string
     const destToken = getToken(destinationToken);
@@ -155,6 +163,15 @@ export function useUniportPayment(
 
     // Refs
     const pollingRef = useRef<NodeJS.Timeout | null>(null);
+    // The poll timer outlives renders, so it reads the latest callbacks from here.
+    const callbacksRef = useRef({ onSuccess, onError });
+    useEffect(() => {
+        callbacksRef.current = { onSuccess, onError };
+    });
+    const pollPausedUntilRef = useRef(0);
+    // Goes up each time polling stops, so a reply still in flight for a payment
+    // that was cancelled or reset is recognised and dropped.
+    const pollGenerationRef = useRef(0);
     const lastStatusRef = useRef<ExecutionStatus | null>(null);
     const previewDebounceRef = useRef<NodeJS.Timeout | null>(null);
     const previewAbortRef = useRef<AbortController | null>(null);
@@ -205,6 +222,7 @@ export function useUniportPayment(
                         refundTo: nextRefundAddress,
                         swapType,
                         dry: true,
+                        appId,
                         signal: controller.signal,
                     });
                     setPreviewQuote(result);
@@ -226,7 +244,7 @@ export function useUniportPayment(
                 }
             }, 250);
         },
-        [destToken, recipient, swapType]
+        [appId, destToken, recipient, swapType]
     );
 
     const setAmount = useCallback(
@@ -294,6 +312,7 @@ export function useUniportPayment(
                 refundTo: effectiveRefundAddress,
                 swapType,
                 dry: false,
+                appId,
             });
 
             setQuote(result);
@@ -311,11 +330,13 @@ export function useUniportPayment(
         recipient,
         destToken,
         swapType,
+        appId,
         onError,
     ]);
 
     // Stop polling
     const stopPolling = useCallback(() => {
+        pollGenerationRef.current += 1;
         if (pollingRef.current) {
             clearInterval(pollingRef.current);
             pollingRef.current = null;
@@ -325,12 +346,15 @@ export function useUniportPayment(
     // Poll for status
     const pollStatus = useCallback(async () => {
         if (!quote?.depositAddress) return;
+        if (Date.now() < pollPausedUntilRef.current) return;
+        const generation = pollGenerationRef.current;
 
         try {
             const result = await getExecutionStatus(
                 quote.depositAddress,
                 quote.memo
             );
+            if (generation !== pollGenerationRef.current) return;
             setStatus(result);
 
             if (result.status !== lastStatusRef.current) {
@@ -341,9 +365,12 @@ export function useUniportPayment(
                 } else if (result.isSuccess) {
                     setPaymentState('success');
                     stopPolling();
-                    onSuccess?.({
+                    callbacksRef.current.onSuccess?.({
                         txHash: result.destinationTxHashes?.[0] || '',
                         amount: quote.amountOut,
+                        depositAddress: quote.depositAddress,
+                        depositMemo: quote.memo,
+                        correlationId: quote.correlationId,
                     });
                 } else if (result.isComplete) {
                     setPaymentState('error');
@@ -354,13 +381,16 @@ export function useUniportPayment(
                             : 'Payment failed'
                     );
                     setError(err);
-                    onError?.(err);
+                    callbacksRef.current.onError?.(err);
                 }
             }
         } catch (err) {
+            if (generation !== pollGenerationRef.current) return;
+            // Asked to slow down: leave the status alone for half a minute.
+            if (isRateLimitError(err)) pollPausedUntilRef.current = Date.now() + 30_000;
             console.error('Status poll error:', err);
         }
-    }, [quote, onSuccess, onError, stopPolling]);
+    }, [quote, stopPolling]);
 
     // Start polling
     const startPolling = useCallback(() => {
