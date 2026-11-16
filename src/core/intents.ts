@@ -299,11 +299,12 @@ export function fromSmallestUnits(amount: string, decimals: number): string {
 }
 
 /** Maximum extra input collected when making EXACT_OUTPUT amounts readable. */
-export const MAX_EXACT_OUTPUT_ROUNDING_BPS = 25;
+export const MAX_EXACT_OUTPUT_ROUNDING_BPS = 1;
 
 /**
  * Round a smallest-unit amount upward to the shortest decimal representation
- * that adds no more than MAX_EXACT_OUTPUT_ROUNDING_BPS (0.25%).
+ * that adds no more than MAX_EXACT_OUTPUT_ROUNDING_BPS (0.01%). The payer
+ * never has to send more than five significant digits.
  */
 export function roundUpInputAmount(
     amount: string,
