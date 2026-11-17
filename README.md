@@ -260,39 +260,54 @@ Everything the SDK reports is a `UniportError`. It has a `code`, a `message` tha
 />
 ```
 
-### Your setup
+### Your setup, found before any request
 
-These are checked before any request is made. Nothing throws and your page keeps working: `UniportButton` renders disabled, `UniportModal` shows "Payment unavailable", the console says what to change, and `onError` is called once.
+Nothing throws and your page keeps working: `UniportButton` renders disabled, `UniportModal` shows "Payment unavailable", the console says what to change, and `onError` is called once.
 
 | Code | Cause |
 |------|-------|
 | `MISSING_RECIPIENT` | `recipient` is missing or empty |
-| `INVALID_RECIPIENT` | `recipient` is not a valid address for the destination chain. Checked up front for EVM chains; for other chains the API reports it when the payer asks for a quote |
+| `INVALID_RECIPIENT` | `recipient` has spaces around it, or on an EVM chain is not `0x` and 40 hex characters |
 | `INVALID_DESTINATION_TOKEN` | `destinationToken` is missing or not a supported token name |
-| `INVALID_AMOUNT` | `amount` is set but is not a positive number, or has more decimals than the token |
+| `INVALID_AMOUNT` | `amount` is set but is not a string holding a positive number, or has more decimals than the token |
 | `SECRET_KEY_AS_APP_ID` | A secret key was passed as `appId`. It is never sent |
 | `APP_ID_REQUIRED` | The site is not `localhost` and no `appId` was passed. Create an app in the dashboard |
-| `APP_NOT_FOUND` | The App ID is unknown, mistyped or disabled. Copy it again from the dashboard |
-| `ORIGIN_NOT_ALLOWED` | The App ID is being used on a site that is not on its list. Add the site in the dashboard |
-| `RECIPIENT_NOT_ALLOWED` | The app only accepts payments to listed addresses, and `recipient` is not one |
-| `RECIPIENT_NOT_READY` | The recipient cannot receive the token yet, for example a Stellar account without a trustline |
-| `VALIDATION_ERROR` | The request was malformed |
 
 To run the same check yourself, for example before showing your own button:
 
 ```ts
 import { checkPaymentSetup } from 'uniport-sdk'
 
-const problem = checkPaymentSetup({ recipient, destinationToken, amount, appId })
+const problem = checkPaymentSetup({
+  recipient,
+  destinationToken,
+  amount,
+  appId,
+  hostname: window.location.hostname, // needed to report APP_ID_REQUIRED
+})
 if (problem) console.log(problem.code, problem.details)
 ```
+
+### Your setup, reported by the API
+
+These arrive when the payer asks for a quote. The payer sees the neutral message, the console says what to change, and `onError` is called if the payer goes on to confirm.
+
+| Code | Cause |
+|------|-------|
+| `APP_ID_REQUIRED` | The site is not `localhost` and no `appId` was sent |
+| `APP_NOT_FOUND` | The App ID is unknown, mistyped or disabled. Copy it again from the dashboard |
+| `ORIGIN_NOT_ALLOWED` | The App ID is being used on a site that is not on its list. Add the site in the dashboard |
+| `RECIPIENT_NOT_ALLOWED` | The app only accepts payments to listed addresses, and `recipient` is not one |
+| `INVALID_RECIPIENT` | `recipient` is not a valid address for the destination chain (chains other than EVM are checked here) |
+| `RECIPIENT_NOT_READY` | The recipient cannot receive the token yet, for example a Stellar account without a trustline |
 
 ### The payer's input
 
 | Code | Cause | The payer is told |
 |------|-------|-------------------|
+| `INVALID_INPUT` | The amount typed is not a number, or has more decimals than the token | What to enter |
 | `NO_LIQUIDITY` | No route for that pair at that size right now | To try a smaller amount or another network |
-| `AMOUNT_TOO_LOW` | Below the route's minimum | The minimum, when it is known |
+| `AMOUNT_TOO_LOW` | Below the route's minimum | That it is too small, with the minimum when the payer chose the amount and the route gave one |
 | `INVALID_REFUND_ADDRESS` | The refund address is not valid for the chain they pay from | That the refund address is not valid |
 
 ### After the payer has sent funds
@@ -307,12 +322,13 @@ if (problem) console.log(problem.code, problem.details)
 | Code | Cause |
 |------|-------|
 | `QUOTE_FAILED` | The route refused the quote for a reason not listed above. `details` has its answer |
+| `VALIDATION_ERROR` | The API found the request malformed |
 | `QUOTE_UNVERIFIED` | The quote could not be verified, so no deposit address was shown |
 | `RATE_LIMITED` | Too many requests in a short time |
 | `REQUEST_TIMEOUT` | The API did not answer in time |
 | `NETWORK_ERROR` | The request never reached the API |
-| `STATUS_CHECK_FAILED` | A status check failed. The SDK keeps checking, and tells the payer if several fail in a row |
-| `DEPOSIT_SUBMISSION_FAILED` | Reporting a deposit's transaction failed |
+| `STATUS_CHECK_FAILED` | A status check failed. Thrown by `getExecutionStatus`. The button does not pass it to `onError`: it keeps checking, and tells the payer after three failures in a row |
+| `DEPOSIT_SUBMISSION_FAILED` | Reporting a deposit's transaction failed. Thrown by `submitDepositTx` |
 | `INTERNAL_ERROR`, `UNKNOWN_ERROR` | Something unexpected |
 
 ## License

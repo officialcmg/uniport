@@ -6,6 +6,8 @@
  * Without one the SDK only works on localhost.
  */
 
+import { SETUP_ERROR_PAYER_MESSAGE, UniportError } from './errors';
+
 export interface UniportConfig {
     /**
      * Your app's public App ID (`app_...`). It can also be passed as the
@@ -33,6 +35,12 @@ export const DEFAULT_REQUEST_TIMEOUT_MS = 20000;
 
 const APP_ID_FORMAT = /^app_[0-9A-Za-z]{22}$/;
 
+/** True for a value that is a secret key, whatever its letter case. */
+export function looksLikeSecretKey(value: string | undefined): boolean {
+    const lower = value?.trim().toLowerCase() ?? '';
+    return lower.startsWith('sk_') || lower.startsWith('whsec_');
+}
+
 interface ConfigStore {
     appId?: string;
     backendUrl?: string;
@@ -57,11 +65,14 @@ const store: ConfigStore = (globalStore[STORE_KEY] ??= { warnedAppIds: new Set()
 export function checkAppId(appId: string | undefined): string | undefined {
     const value = appId?.trim();
     if (!value) return undefined;
-    if (value.startsWith('sk_') || value.startsWith('whsec_')) {
-        throw new Error(
-            'Uniport: a secret key was passed as appId. Secret keys must stay on your server; ' +
-            'use the public App ID (app_...) from https://uniport.dev/dashboard.'
-        );
+    if (looksLikeSecretKey(value)) {
+        throw new UniportError({
+            code: 'SECRET_KEY_AS_APP_ID',
+            message: SETUP_ERROR_PAYER_MESSAGE,
+            details:
+                'A secret key was passed as appId. Secret keys must stay on your server; ' +
+                'use the public App ID (app_...) from https://uniport.dev/dashboard.',
+        });
     }
     if (!APP_ID_FORMAT.test(value) && !store.warnedAppIds.has(value)) {
         store.warnedAppIds.add(value);

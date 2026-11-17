@@ -84,6 +84,13 @@ function extractDetailMessage(details: unknown): string | undefined {
     return undefined;
 }
 
+/** What the payer is told when the cause is not one they can act on. */
+const GENERIC_PAYER_MESSAGE: Partial<Record<UniportErrorCode, string>> = {
+    QUOTE_FAILED: 'Could not get a quote for this payment. Please try again.',
+    DEPOSIT_SUBMISSION_FAILED: 'Could not report the deposit. Your payment is not affected.',
+    STATUS_CHECK_FAILED: 'Could not check the payment status. Please try again.',
+};
+
 /** What the payer is told for each cause they can act on, or that will pass. */
 function payerMessage(
     code: string,
@@ -163,8 +170,9 @@ export function toUniportError(
     }
     return new UniportError({
         code,
-        message: forPayer || detailMessage || body.message || fallback.message,
-        details: body.details,
+        // 1Click's own sentence is in `details`; it is not written for a payer.
+        message: forPayer || GENERIC_PAYER_MESSAGE[fallback.code] || 'Something went wrong. Please try again.',
+        details: body.details ?? body.message,
         status: fallback.status,
     });
 }
@@ -451,7 +459,7 @@ export async function getQuote(options: QuoteOptions): Promise<QuoteResult> {
             }
             throw new UniportError({
                 code: 'REQUEST_TIMEOUT',
-                message: 'Quote request timed out',
+                message: 'That took too long. Please try again.',
             });
         }
         throw error;
@@ -467,7 +475,7 @@ export async function getQuote(options: QuoteOptions): Promise<QuoteResult> {
             code: 'QUOTE_FAILED',
             message: 'Quote failed.',
             status: response.status,
-        }, originToken);
+        }, swapType === 'EXACT_INPUT' ? originToken : undefined);
     }
 
     const data = await response.json();

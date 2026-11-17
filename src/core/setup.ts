@@ -6,7 +6,7 @@
  * here throws: a setup mistake must not take the host page down.
  */
 
-import { getUniportConfig } from './config';
+import { getUniportConfig, looksLikeSecretKey } from './config';
 import { SETUP_ERROR_PAYER_MESSAGE, UniportError, type UniportErrorCode } from './errors';
 import { getToken, usesEvmAddress } from './tokens';
 
@@ -23,11 +23,6 @@ export interface PaymentSetup {
 }
 
 const EVM_ADDRESS = /^0x[0-9a-fA-F]{40}$/;
-
-function isSecretKey(value: string | undefined): boolean {
-    const trimmed = value?.trim() ?? '';
-    return trimmed.startsWith('sk_') || trimmed.startsWith('whsec_');
-}
 
 /** localhost and its relatives, where the API needs no App ID. */
 function isLocalHost(hostname: string): boolean {
@@ -53,7 +48,7 @@ export function checkPaymentSetup(setup: PaymentSetup): UniportError | null {
     const { recipient, destinationToken, amount } = setup;
 
     // First, so that a secret key is caught whatever else is wrong.
-    if (isSecretKey(setup.appId)) {
+    if (looksLikeSecretKey(setup.appId)) {
         return setupError(
             'SECRET_KEY_AS_APP_ID',
             'A secret key was passed as appId. Secret keys must stay on your server; ' +
@@ -83,9 +78,16 @@ export function checkPaymentSetup(setup: PaymentSetup): UniportError | null {
             'recipient is required: the address on ' + token.chain + ' that should receive the payment.'
         );
     }
+    // The value is sent as it is, so spaces around it would reach the API.
+    if (recipient !== recipient.trim()) {
+        return setupError(
+            'INVALID_RECIPIENT',
+            'recipient has spaces around it. Pass the address on its own.'
+        );
+    }
     // Only where the format is certain. Other chains are left to the API,
     // which knows their formats better than a pattern here would.
-    if (usesEvmAddress(token.chain) && !EVM_ADDRESS.test(recipient.trim())) {
+    if (usesEvmAddress(token.chain) && !EVM_ADDRESS.test(recipient)) {
         return setupError(
             'INVALID_RECIPIENT',
             '"' + recipient + '" is not a valid address for ' + destinationToken +
@@ -94,7 +96,8 @@ export function checkPaymentSetup(setup: PaymentSetup): UniportError | null {
     }
 
     if (amount !== undefined) {
-        const value = String(amount).trim();
+        // A string, exactly as it will be sent: no spaces, no number type.
+        const value = typeof amount === 'string' ? amount : '';
         if (!/^\d+(\.\d+)?$/.test(value) || Number(value) <= 0) {
             return setupError(
                 'INVALID_AMOUNT',
@@ -125,6 +128,31 @@ export function checkPaymentSetup(setup: PaymentSetup): UniportError | null {
     }
 
     return null;
+}
+
+/**
+ * Checks an amount the payer typed, before a quote is asked for.
+ *   'ok'          ask for the quote
+ *   'incomplete'  still being typed (empty, "0", "0."): wait, say nothing
+ *   an error      tell the payer
+ */
+export function checkTypedAmount(
+    amount: string,
+    token: { decimals: number; symbol: string }
+): 'ok' | 'incomplete' | UniportError {
+    const value = amount.trim();
+    if (value === '' || /^0*\.?0*$/.test(value) || /^\d+\.$/.test(value)) return 'incomplete';
+    if (!/^\d*\.?\d+$/.test(value)) {
+        return new UniportError({ code: 'INVALID_INPUT', message: 'Enter the amount as a number, such as 25 or 0.5.' });
+    }
+    const decimals = value.split('.')[1]?.length ?? 0;
+    if (decimals > token.decimals) {
+        return new UniportError({
+            code: 'INVALID_INPUT',
+            message: token.symbol + ' has at most ' + token.decimals + ' decimal places.',
+        });
+    }
+    return 'ok';
 }
 
 const reported = new Set<string>();

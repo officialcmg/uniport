@@ -23,8 +23,8 @@ export type UniportErrorCode =
     | 'ORIGIN_NOT_ALLOWED'
     | 'RECIPIENT_NOT_ALLOWED'
     | 'RECIPIENT_NOT_READY'
-    | 'VALIDATION_ERROR'
     // Something the payer can change
+    | 'INVALID_INPUT'
     | 'NO_LIQUIDITY'
     | 'AMOUNT_TOO_LOW'
     | 'INVALID_REFUND_ADDRESS'
@@ -32,6 +32,7 @@ export type UniportErrorCode =
     | 'PAYMENT_REFUNDED'
     | 'PAYMENT_FAILED'
     // The service
+    | 'VALIDATION_ERROR'
     | 'QUOTE_FAILED'
     | 'QUOTE_UNVERIFIED'
     | 'DEPOSIT_SUBMISSION_FAILED'
@@ -55,10 +56,10 @@ const DEVELOPER_CODES: ReadonlySet<string> = new Set([
     'ORIGIN_NOT_ALLOWED',
     'RECIPIENT_NOT_ALLOWED',
     'RECIPIENT_NOT_READY',
-    'VALIDATION_ERROR',
 ]);
 
 const PAYER_CODES: ReadonlySet<string> = new Set([
+    'INVALID_INPUT',
     'NO_LIQUIDITY',
     'AMOUNT_TOO_LOW',
     'INVALID_REFUND_ADDRESS',
@@ -84,6 +85,7 @@ export interface UniportApiErrorBody {
 }
 
 export class UniportError extends Error {
+    /** `message` is always fit to show the payer. */
     code: UniportErrorCode;
     /** Who can do something about it. See the top of this file. */
     fixableBy: UniportErrorFixableBy;
@@ -137,6 +139,13 @@ export function toUniportErrorFromUnknown(error: unknown, fallbackMessage: strin
               ? (error as { message: string }).message
               : fallbackMessage;
     // fetch() rejects with a TypeError when the request never reached the server.
-    const code: UniportErrorCode = error instanceof TypeError ? 'NETWORK_ERROR' : 'UNKNOWN_ERROR';
-    return new UniportError({ code, message: message || fallbackMessage, details: error });
+    if (error instanceof TypeError) {
+        return new UniportError({
+            code: 'NETWORK_ERROR',
+            message: 'Could not reach Uniport. Check your connection and try again.',
+            details: error,
+        });
+    }
+    // What was thrown is kept in `details`; `message` stays fit to show a payer.
+    return new UniportError({ code: 'UNKNOWN_ERROR', message: fallbackMessage, details: message || error });
 }

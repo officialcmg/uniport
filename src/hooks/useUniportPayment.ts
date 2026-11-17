@@ -16,7 +16,7 @@ import {
     toUniportErrorFromUnknown,
     UniportError,
 } from '../core/intents';
-import { checkPaymentSetup, reportSetupError } from '../core/setup';
+import { checkPaymentSetup, checkTypedAmount, reportSetupError } from '../core/setup';
 import { useHostname } from './useHostname';
 import {
     ALL_TOKENS,
@@ -170,9 +170,14 @@ export function useUniportPayment(
     });
     const pollPausedUntilRef = useRef(0);
     const pollFailuresRef = useRef(0);
+    const reportedSetupKeyRef = useRef('');
 
     // Tell the developer about a setup mistake once, in the console and through onError.
     useEffect(() => {
+        // The ref outlives React's development-only double run of effects, so
+        // onError is called once per problem there too.
+        if (reportedSetupKeyRef.current === setupErrorKey) return;
+        reportedSetupKeyRef.current = setupErrorKey;
         if (!setupError) return;
         reportSetupError(setupError);
         callbacksRef.current.onError?.(setupError);
@@ -216,6 +221,17 @@ export function useUniportPayment(
             ) {
                 setIsLoadingPreview(false);
                 return;
+            }
+
+            // What the payer typed is checked here, so a slip of theirs is never
+            // sent and never blamed on the app.
+            if (swapType === 'EXACT_INPUT') {
+                const typed = checkTypedAmount(nextAmount, nextSelectedToken);
+                if (typed !== 'ok') {
+                    if (typed !== 'incomplete') setPreviewError(typed);
+                    setIsLoadingPreview(false);
+                    return;
+                }
             }
 
             setIsLoadingPreview(true);
@@ -377,6 +393,9 @@ export function useUniportPayment(
                 quote.memo
             );
             if (generation !== pollGenerationRef.current) return;
+            // A check got through: any earlier run of failures is over.
+            pollFailuresRef.current = 0;
+            setStatusTrouble(false);
             setStatus(result);
 
             if (result.status !== lastStatusRef.current) {
@@ -409,11 +428,14 @@ export function useUniportPayment(
             }
         } catch (err) {
             if (generation !== pollGenerationRef.current) return;
-            // Asked to slow down: leave the status alone for half a minute.
-            if (isRateLimitError(err)) pollPausedUntilRef.current = Date.now() + 30_000;
-            // Checking carries on; after a few failures in a row the payer is told.
-            pollFailuresRef.current += 1;
-            if (pollFailuresRef.current >= 3) setStatusTrouble(true);
+            if (isRateLimitError(err)) {
+                // Asked to slow down: leave the status alone for half a minute.
+                pollPausedUntilRef.current = Date.now() + 30_000;
+            } else {
+                // Checking carries on; after three failures in a row the payer is told.
+                pollFailuresRef.current += 1;
+                if (pollFailuresRef.current >= 3) setStatusTrouble(true);
+            }
             console.error('Status poll error:', err);
         }
     }, [quote, stopPolling]);

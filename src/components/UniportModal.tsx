@@ -9,6 +9,7 @@ import { useUniportPayment } from '../hooks/useUniportPayment';
 import { CHAINS, getExplorerTxUrl, usesEvmAddress, type ChainId } from '../core/tokens';
 import { UNIPORT_ENS_NAME } from '../core/ens';
 import { formatDisplayAmount, errorCode } from '../core/intents';
+import { checkTypedAmount } from '../core/setup';
 import type { UniportModalProps } from '../types';
 
 // ============================================================================
@@ -261,64 +262,16 @@ function UniportMark({ size = 12 }: { size?: number }) {
 /** Lists longer than this get a search box. */
 const SEARCH_THRESHOLD = 8;
 
-/** Codes whose message is already written for the payer. */
-const PAYER_READY_CODES = new Set([
-    'NO_LIQUIDITY',
-    'AMOUNT_TOO_LOW',
-    'INVALID_REFUND_ADDRESS',
-    'QUOTE_UNVERIFIED',
-    'RATE_LIMITED',
-    'PAYMENT_REFUNDED',
-    'PAYMENT_FAILED',
-    // Setup errors carry a neutral message; the reason is in the console.
-    'MISSING_RECIPIENT',
-    'INVALID_DESTINATION_TOKEN',
-    'INVALID_RECIPIENT',
-    'INVALID_AMOUNT',
-    'SECRET_KEY_AS_APP_ID',
-    'APP_ID_REQUIRED',
-    'APP_NOT_FOUND',
-    'ORIGIN_NOT_ALLOWED',
-    'RECIPIENT_NOT_ALLOWED',
-    'RECIPIENT_NOT_READY',
-]);
-
 /** The sentence a payer is shown for an error. */
 function formatPreviewError(error: Error): string {
-    const code = errorCode(error);
-    if (code && PAYER_READY_CODES.has(code)) {
+    // Every UniportError carries a message written for the payer.
+    if (errorCode(error)) {
         return error.message;
     }
-
     if (error.name === 'AbortError') {
         return 'Estimate request was cancelled. Try again.';
     }
-
-    if (code === 'REQUEST_TIMEOUT') {
-        return 'That took too long. Please try again.';
-    }
-    if (code === 'NETWORK_ERROR') {
-        return 'Could not reach Uniport. Check your connection and try again.';
-    }
-
-    // An API from before the causes were sorted into codes only sends 1Click's
-    // sentence, so read that as a fallback.
-    const normalized = error.message.toLowerCase();
-
-    if (normalized.includes('no liquidity')) {
-        return 'No route for this amount right now. Try a smaller amount or another network.';
-    }
-    if (normalized.includes('too low') || normalized.includes('minimum swap amount')) {
-        return 'This amount is too small for this route. Try a larger amount.';
-    }
-    if (normalized.includes('refund') && normalized.includes('valid')) {
-        return 'That is not a valid refund address for this network.';
-    }
-    if (normalized.includes('amount')) {
-        return 'Enter a valid amount to fetch an estimate.';
-    }
-
-    return 'Could not fetch an estimate. Please try again.';
+    return 'Something went wrong. Please try again.';
 }
 
 function formatChainLabel(chainId: string): string {
@@ -419,6 +372,10 @@ export function UniportModal({
         payment.amount &&
         (isExactOutput || payment.effectiveRefundAddress)
     );
+    // False while the payer is still typing the amount ("0", "0.").
+    const amountReady =
+        isExactOutput ||
+        (!!payment.selectedToken && checkTypedAmount(payment.amount, payment.selectedToken) === 'ok');
     const canSubmit = !!(
         canPreviewEstimate &&
         payment.previewQuote &&
@@ -785,6 +742,7 @@ export function UniportModal({
                             </span>
                         )}
                         {canPreviewEstimate &&
+                            amountReady &&
                             !payment.isLoadingPreview &&
                             !payment.previewQuote &&
                             !payment.previewError && (
@@ -795,7 +753,7 @@ export function UniportModal({
                     </div>
 
                     {/* Exact-amount warning */}
-                    {!!payment.amount && !isExactOutput && (
+                    {!!payment.amount && !isExactOutput && !!payment.previewQuote && !payment.previewError && (
                         <div style={{ ...warningBox, marginBottom: '20px' }}>
                             <WarningTriangle color={t.warning} />
                             <p style={{ margin: 0, fontSize: '13px', color: t.warningText, lineHeight: 1.55 }}>
