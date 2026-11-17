@@ -131,7 +131,15 @@ export function isRateLimitError(error: unknown): error is UniportError {
 
 /** Turns anything thrown into a UniportError, keeping one that already is. */
 export function toUniportErrorFromUnknown(error: unknown, fallbackMessage: string): UniportError {
-    if (errorCode(error) !== undefined && error instanceof Error) return error as UniportError;
+    // Kept only if it is one of ours. Other errors can carry a `code` too
+    // (a network library's ECONNRESET, say) and must still be wrapped.
+    if (
+        error instanceof Error &&
+        errorCode(error) !== undefined &&
+        typeof (error as { fixableBy?: unknown }).fixableBy === 'string'
+    ) {
+        return error as UniportError;
+    }
     const message =
         error instanceof Error
             ? error.message

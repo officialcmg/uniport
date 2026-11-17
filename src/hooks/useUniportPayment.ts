@@ -310,6 +310,24 @@ export function useUniportPayment(
     }, [amount, evmDefaultRefundAddress, refundAddress, schedulePreviewQuote]);
 
     // Handle token selection
+    // If the setup becomes wrong while an estimate is on its way (the app
+    // clears `recipient`, say), stop it: no request is made with a bad setup.
+    useEffect(() => {
+        if (!setupError) return;
+        if (previewDebounceRef.current) {
+            clearTimeout(previewDebounceRef.current);
+            previewDebounceRef.current = null;
+        }
+        if (previewAbortRef.current) {
+            previewAbortRef.current.abort();
+            previewAbortRef.current = null;
+        }
+        setPreviewQuote(null);
+        setPreviewError(null);
+        setIsLoadingPreview(false);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [setupErrorKey]);
+
     const handleTokenSelect = useCallback((token: Token) => {
         setSelectedToken(token);
         setPaymentState('selecting');

@@ -143,6 +143,12 @@ test('anything thrown becomes a UniportError', () => {
     assert.equal(boom.message, 'fallback');
     assert.equal(boom.details, 'boom');
     assert.equal(toUniportErrorFromUnknown('text', 'fallback').message, 'fallback');
+    // An error from elsewhere that happens to carry a code is still wrapped.
+    const foreign = toUniportErrorFromUnknown(Object.assign(new Error('connection lost'), { code: 'ECONNRESET' }), 'fallback');
+    assert.ok(foreign instanceof UniportError);
+    assert.equal(foreign.code, 'UNKNOWN_ERROR');
+    assert.equal(foreign.fixableBy, 'service');
+    assert.equal(foreign.message, 'fallback');
     assert.equal(toUniportErrorFromUnknown(undefined, 'fallback').fixableBy, 'service');
 });
 
