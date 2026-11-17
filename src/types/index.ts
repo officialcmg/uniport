@@ -4,6 +4,8 @@
  * Component props and UI state types
  */
 
+import type { UniportError } from '../core/errors';
+
 // ============================================================================
 // COMPONENT PROPS
 // ============================================================================
@@ -50,8 +52,12 @@ export interface UniportButtonProps {
     theme?: 'light' | 'dark';
     /** Callback when payment completes */
     onSuccess?: (result: PaymentSuccess) => void;
-    /** Callback when payment fails */
-    onError?: (error: Error) => void;
+    /**
+     * Called when something goes wrong: a setup mistake, a refused quote, or a
+     * payment that failed or was refunded. Always a UniportError; read `code`
+     * and `fixableBy`.
+     */
+    onError?: (error: UniportError) => void;
     /** Callback when modal opens/closes */
     onOpenChange?: (open: boolean) => void;
 }
@@ -76,8 +82,12 @@ export interface UniportModalProps {
     theme?: 'light' | 'dark';
     /** Callback when payment completes */
     onSuccess?: (result: PaymentSuccess) => void;
-    /** Callback when payment fails */
-    onError?: (error: Error) => void;
+    /**
+     * Called when something goes wrong: a setup mistake, a refused quote, or a
+     * payment that failed or was refunded. Always a UniportError; read `code`
+     * and `fixableBy`.
+     */
+    onError?: (error: UniportError) => void;
 }
 
 /** Payment state for UI */

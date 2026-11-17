@@ -15,8 +15,10 @@
  * ```
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { UniportModal } from './UniportModal';
+import { checkPaymentSetup } from '../core/setup';
+import { useHostname } from '../hooks/useHostname';
 import type { UniportButtonProps } from '../types';
 
 type ButtonVariant = NonNullable<UniportButtonProps['variant']>;
@@ -146,8 +148,17 @@ export function UniportButton({
 }: UniportButtonProps) {
     const [isOpen, setIsOpen] = useState(false);
 
+    // A button that cannot work is shown disabled. What is wrong is logged for
+    // the developer and sent to onError by the modal's hook.
+    const hostname = useHostname();
+    const setupError = useMemo(
+        () => checkPaymentSetup({ appId, recipient, destinationToken, amount, hostname }),
+        [appId, recipient, destinationToken, amount, hostname]
+    );
+    const unavailable = disabled || setupError !== null;
+
     const handleOpen = () => {
-        if (!disabled) {
+        if (!unavailable) {
             setIsOpen(true);
             onOpenChange?.(true);
         }
@@ -158,14 +169,15 @@ export function UniportButton({
         onOpenChange?.(false);
     };
 
-    const style = getButtonStyle(variant, theme, disabled);
+    const style = getButtonStyle(variant, theme, unavailable);
 
     return (
         <>
             <button
                 type="button"
                 onClick={handleOpen}
-                disabled={disabled}
+                disabled={unavailable}
+                data-uniport-setup-error={setupError?.code}
                 className={className}
                 style={style}
             >

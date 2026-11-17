@@ -45,7 +45,7 @@ The SDK uses Uniport's hosted backend. No secret key or backend of your own is n
 | `className` | `string` | No | Custom CSS class |
 | `theme` | `'light' \| 'dark'` | No | Modal theme |
 | `onSuccess` | `(result) => void` | No | Called when payment completes, with `{ txHash, amount, depositAddress, depositMemo, correlationId }` |
-| `onError` | `(error) => void` | No | Called when payment fails |
+| `onError` | `(error: UniportError) => void` | No | Called when something goes wrong: a setup mistake, a refused quote, or a payment that failed or was refunded. See [Errors](#errors) |
 | `onOpenChange` | `(open) => void` | No | Called when modal opens or closes |
 
 If `refundAddress` is omitted, the payer can enter it inside the modal. The refund address is on the source chain the payer sends from.
@@ -226,6 +226,8 @@ The package exports:
 - `UniportModal`
 - `useUniportPayment`
 - `configureUniport` — set `appId` once for the core functions
+- `checkPaymentSetup` — checks `recipient`, `destinationToken`, `amount` and `appId` and returns the first problem, or `null`
+- `UniportError` — the error type, with `code` and `fixableBy`
 - `getQuote`
 - `submitDepositTx`
 - `getExecutionStatus`
@@ -239,18 +241,79 @@ The package exports:
 
 ## Errors
 
-Backend request failures are surfaced as typed `UniportError` instances from the core module. Timeouts, quote failures, deposit submission failures, and status failures are normalized by the SDK before they reach your UI.
+Everything the SDK reports is a `UniportError`. It has a `code`, a `message` that is safe to show the payer, `details` for you, and `fixableBy`, which says who can do something about it:
 
-Four codes mean the app's setup needs fixing. The payer sees a neutral message, and the reason is logged to the browser console:
+| `fixableBy` | Meaning | What the payer sees |
+|-------------|---------|---------------------|
+| `developer` | Your setup is wrong | A neutral "payments are not available" message. The reason is in `details` and in the browser console |
+| `payer` | The payer can change something | A sentence saying what, such as the minimum amount |
+| `service` | Nobody can fix it right now | A request to try again |
 
-| Code | Meaning | Fix |
-|------|---------|-----|
-| `APP_ID_REQUIRED` | The site is not `localhost` and no `appId` was passed | Create an app in the dashboard and pass its ID |
-| `APP_NOT_FOUND` | The App ID is unknown, mistyped or disabled | Copy it again from the dashboard |
-| `ORIGIN_NOT_ALLOWED` | The App ID is being used on a site that is not on its list | Add the site to the app's allowed origins |
-| `RECIPIENT_NOT_ALLOWED` | The app only accepts payments to listed addresses, and `recipient` is not one | Use a listed address, or change the list |
+```tsx
+<UniportButton
+  appId="app_..."
+  recipient="0x..."
+  destinationToken="arbitrumUSDC"
+  onError={(error) => {
+    if (error.fixableBy === 'developer') reportToMyLogs(error.code, error.details)
+  }}
+/>
+```
 
-`RATE_LIMITED` means too many requests in a short time; the payer is asked to wait a minute.
+### Your setup
+
+These are checked before any request is made. Nothing throws and your page keeps working: `UniportButton` renders disabled, `UniportModal` shows "Payment unavailable", the console says what to change, and `onError` is called once.
+
+| Code | Cause |
+|------|-------|
+| `MISSING_RECIPIENT` | `recipient` is missing or empty |
+| `INVALID_RECIPIENT` | `recipient` is not a valid address for the destination chain. Checked up front for EVM chains; for other chains the API reports it when the payer asks for a quote |
+| `INVALID_DESTINATION_TOKEN` | `destinationToken` is missing or not a supported token name |
+| `INVALID_AMOUNT` | `amount` is set but is not a positive number, or has more decimals than the token |
+| `SECRET_KEY_AS_APP_ID` | A secret key was passed as `appId`. It is never sent |
+| `APP_ID_REQUIRED` | The site is not `localhost` and no `appId` was passed. Create an app in the dashboard |
+| `APP_NOT_FOUND` | The App ID is unknown, mistyped or disabled. Copy it again from the dashboard |
+| `ORIGIN_NOT_ALLOWED` | The App ID is being used on a site that is not on its list. Add the site in the dashboard |
+| `RECIPIENT_NOT_ALLOWED` | The app only accepts payments to listed addresses, and `recipient` is not one |
+| `RECIPIENT_NOT_READY` | The recipient cannot receive the token yet, for example a Stellar account without a trustline |
+| `VALIDATION_ERROR` | The request was malformed |
+
+To run the same check yourself, for example before showing your own button:
+
+```ts
+import { checkPaymentSetup } from 'uniport-sdk'
+
+const problem = checkPaymentSetup({ recipient, destinationToken, amount, appId })
+if (problem) console.log(problem.code, problem.details)
+```
+
+### The payer's input
+
+| Code | Cause | The payer is told |
+|------|-------|-------------------|
+| `NO_LIQUIDITY` | No route for that pair at that size right now | To try a smaller amount or another network |
+| `AMOUNT_TOO_LOW` | Below the route's minimum | The minimum, when it is known |
+| `INVALID_REFUND_ADDRESS` | The refund address is not valid for the chain they pay from | That the refund address is not valid |
+
+### After the payer has sent funds
+
+| Code | Cause |
+|------|-------|
+| `PAYMENT_REFUNDED` | The swap could not complete and the funds were refunded. See where refunds go under "Confirming a payment" |
+| `PAYMENT_FAILED` | The swap failed |
+
+### The service
+
+| Code | Cause |
+|------|-------|
+| `QUOTE_FAILED` | The route refused the quote for a reason not listed above. `details` has its answer |
+| `QUOTE_UNVERIFIED` | The quote could not be verified, so no deposit address was shown |
+| `RATE_LIMITED` | Too many requests in a short time |
+| `REQUEST_TIMEOUT` | The API did not answer in time |
+| `NETWORK_ERROR` | The request never reached the API |
+| `STATUS_CHECK_FAILED` | A status check failed. The SDK keeps checking, and tells the payer if several fail in a row |
+| `DEPOSIT_SUBMISSION_FAILED` | Reporting a deposit's transaction failed |
+| `INTERNAL_ERROR`, `UNKNOWN_ERROR` | Something unexpected |
 
 ## License
 
