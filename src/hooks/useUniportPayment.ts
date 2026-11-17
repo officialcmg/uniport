@@ -154,8 +154,10 @@ export function useUniportPayment(
 
     // The refund address actually sent with quotes: the payer's input if
     // provided, otherwise the Uniport default — but only on EVM source chains.
+    // A fixed-amount payment sends the payer's address or nothing: with
+    // nothing, the API refunds to Uniport's Intents account.
     const effectiveRefundAddress = swapType === 'EXACT_OUTPUT'
-        ? ''
+        ? refundAddress.trim()
         : refundAddress.trim() ||
           (selectedChain && usesEvmAddress(selectedChain.id)
               ? evmDefaultRefundAddress
@@ -291,12 +293,12 @@ export function useUniportPayment(
             setRefundAddressState(newRefundAddress);
             const nextEffective =
                 newRefundAddress.trim() ||
-                (selectedChain && usesEvmAddress(selectedChain.id)
+                (swapType !== 'EXACT_OUTPUT' && selectedChain && usesEvmAddress(selectedChain.id)
                     ? evmDefaultRefundAddress
                     : '');
             schedulePreviewQuote(amount, nextEffective, selectedToken);
         },
-        [amount, evmDefaultRefundAddress, schedulePreviewQuote, selectedChain, selectedToken]
+        [amount, evmDefaultRefundAddress, schedulePreviewQuote, selectedChain, selectedToken, swapType]
     );
 
     // Handle chain selection
@@ -307,9 +309,9 @@ export function useUniportPayment(
         setPaymentState('selecting');
         const nextEffective =
             refundAddress.trim() ||
-            (usesEvmAddress(chain.id) ? evmDefaultRefundAddress : '');
+            (swapType !== 'EXACT_OUTPUT' && usesEvmAddress(chain.id) ? evmDefaultRefundAddress : '');
         schedulePreviewQuote(amount, nextEffective, nextToken);
-    }, [amount, evmDefaultRefundAddress, refundAddress, schedulePreviewQuote]);
+    }, [amount, evmDefaultRefundAddress, refundAddress, schedulePreviewQuote, swapType]);
 
     // Handle token selection
     // If the setup becomes wrong while an estimate is on its way (the app

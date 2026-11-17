@@ -48,7 +48,7 @@ The SDK uses Uniport's hosted backend. No secret key or backend of your own is n
 | `onError` | `(error: UniportError) => void` | No | Called when something goes wrong: a setup mistake, a refused quote, or a payment that failed or was refunded. See [Errors](#errors) |
 | `onOpenChange` | `(open) => void` | No | Called when modal opens or closes |
 
-If `refundAddress` is omitted, the payer can enter it inside the modal. The refund address is on the source chain the payer sends from.
+If `refundAddress` is omitted, the payer can enter it inside the modal. The refund address is on the source chain the payer sends from. It is used for both kinds of payment: when `amount` is set it is optional, and a payer who leaves it blank has refunds and any surplus credited to Uniport.
 
 When `amount` is set, the payer can't change it in the modal.
 
@@ -75,7 +75,7 @@ const paid =
 
 `amountOut` is `null` until the payment is delivered. If `record` is `unavailable`, Uniport could not read its record just now, so `appId` is `null`: ask again shortly. Also record each payment you accept, so it cannot be used for two orders: store `payment.depositAddress` and `payment.depositMemo` from the response, not the values the browser sent, because the same address can be written in more than one way. Add `?memo=` with `depositMemo` on chains that use a memo. No secret is needed for this call.
 
-When `amount` is supplied, the modal requests that exact destination amount and rounds the quoted input upward to a shorter number, by at most 0.01% (one cent per $100). The payer sends at most five significant digits (a whole number of tokens for amounts of 100,000 or more). Rounded surplus and failed-swap refunds are credited to Uniport's configured Intents account. When `amount` is omitted, the payer enters an exact input amount and receives the quoted output.
+When `amount` is supplied, the modal requests that exact destination amount and rounds the quoted input upward to a shorter number, by at most 0.01% (one cent per $100). The payer sends at most five significant digits (a whole number of tokens for amounts of 100,000 or more). The payer also sends a small buffer in case the price moves: about 0.3% when both tokens are dollar stablecoins, about 1% otherwise. Whatever the swap does not use, and the whole payment if the swap fails, is returned to the refund address the payer gave. If they gave none, it is credited to Uniport's Intents account. When `amount` is omitted, the payer enters an exact input amount and receives the quoted output.
 
 **EVM source chains only:** if the payer leaves the refund address blank, it defaults to Uniport's own address (resolved from `uniport.eth`, with a hardcoded fallback if resolution fails) rather than blocking the payment. This exists because the underlying 1Click API currently requires an explicit refund address — it cannot yet auto-refund to the depositing wallet. On non-EVM chains (Sui, Solana, Bitcoin, etc.) a refund address is still required from the payer, since there is no Uniport-controlled address on those chains to fall back to.
 

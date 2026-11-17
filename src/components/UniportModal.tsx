@@ -633,7 +633,7 @@ export function UniportModal({
                         </div>
                     </div>
 
-                    {!isExactOutput && <div style={{ marginBottom: '18px' }}>
+                    <div style={{ marginBottom: '18px' }}>
                         <label
                             style={{
                                 display: 'block',
@@ -644,7 +644,7 @@ export function UniportModal({
                             }}
                         >
                             Refund address on {ch?.name || 'the source chain'}
-                            {ch && usesEvmAddress(ch.id) && (
+                            {(isExactOutput || (ch && usesEvmAddress(ch.id))) && (
                                 <span style={{ fontWeight: 400, color: t.textMuted }}> (optional)</span>
                             )}
                         </label>
@@ -653,9 +653,11 @@ export function UniportModal({
                             value={payment.refundAddress}
                             onChange={(e) => payment.setRefundAddress(e.target.value)}
                             placeholder={
-                                ch && usesEvmAddress(ch.id)
-                                    ? `Optional — defaults to ${UNIPORT_ENS_NAME}`
-                                    : `Enter a ${ch?.name || 'source chain'} refund address`
+                                isExactOutput
+                                    ? `Your ${ch?.name || 'source chain'} address`
+                                    : ch && usesEvmAddress(ch.id)
+                                        ? `Optional — defaults to ${UNIPORT_ENS_NAME}`
+                                        : `Enter a ${ch?.name || 'source chain'} refund address`
                             }
                             spellCheck={false}
                             autoCapitalize="off"
@@ -680,9 +682,11 @@ export function UniportModal({
                                 lineHeight: 1.5,
                             }}
                         >
-                            {payment.isUsingDefaultRefundAddress
-                                ? `Used only if the swap fails. You can enter your own address, or leave blank to use Uniport's default (${UNIPORT_ENS_NAME}).`
-                                : 'Used only if the swap fails. This address must live on the chain the payer is sending from.'}
+                            {isExactOutput
+                                ? 'If the swap fails, or you send more than it needs, the funds are returned here. Left blank, they are credited to Uniport.'
+                                : payment.isUsingDefaultRefundAddress
+                                    ? `Used only if the swap fails. You can enter your own address, or leave blank to use Uniport's default (${UNIPORT_ENS_NAME}).`
+                                    : 'Used only if the swap fails. This address must live on the chain the payer is sending from.'}
                         </p>
                         {ch?.id === 'stellar' && tok?.symbol !== 'XLM' && (
                             <p
@@ -696,7 +700,7 @@ export function UniportModal({
                                 This refund address must already have a trustline for {tok?.symbol} on Stellar, or a refund cannot be delivered to it.
                             </p>
                         )}
-                    </div>}
+                    </div>
 
                     {/* Live preview */}
                     <div style={{
