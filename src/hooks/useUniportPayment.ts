@@ -4,7 +4,7 @@
  * Main hook for managing payment state and flow
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
     getQuote,
     getExecutionStatus,
@@ -13,9 +13,13 @@ import {
     type ExecutionStatus,
     type SwapType,
     isRateLimitError,
+    toUniportErrorFromUnknown,
+    UniportError,
 } from '../core/intents';
-import { checkAppId } from '../core/config';
+import { checkPaymentSetup, checkTypedAmount, reportSetupError } from '../core/setup';
+import { useHostname } from './useHostname';
 import {
+    ALL_TOKENS,
     getSupportedChains,
     getToken,
     usesEvmAddress,
@@ -37,18 +41,26 @@ export interface UseUniportPaymentOptions {
     /** Exact destination amount; omit to let the payer enter an input amount. */
     amount?: string;
     onSuccess?: (result: PaymentSuccess) => void;
-    onError?: (error: Error) => void;
+    /** Always a UniportError: read `code` and `fixableBy`. */
+    onError?: (error: UniportError) => void;
 }
 
 export interface UseUniportPaymentReturn {
     // State
+    /**
+     * Set when the values passed in are wrong (missing recipient, unknown
+     * token, and so on). No request is made while it is set.
+     */
+    setupError: UniportError | null;
+    /** True after several status checks in a row have failed. Checking carries on. */
+    statusTrouble: boolean;
     paymentState: PaymentState;
     quote: QuoteResult | null;
     previewQuote: QuoteResult | null;
-    previewError: Error | null;
+    previewError: UniportError | null;
     isLoadingPreview: boolean;
     status: StatusResult | null;
-    error: Error | null;
+    error: UniportError | null;
 
     // Selected values
     selectedChain: Chain | null;
@@ -78,19 +90,6 @@ export interface UseUniportPaymentReturn {
     copyToClipboard: (text: string) => Promise<boolean>;
 }
 
-function normalizeError(error: unknown, fallback: string): Error {
-    if (error instanceof Error) return error;
-    if (
-        typeof error === 'object' &&
-        error !== null &&
-        'message' in error &&
-        typeof error.message === 'string'
-    ) {
-        return new Error(error.message);
-    }
-    return new Error(fallback);
-}
-
 export function useUniportPayment(
     options: UseUniportPaymentOptions
 ): UseUniportPaymentReturn {
@@ -106,27 +105,28 @@ export function useUniportPayment(
     const swapType: Extract<SwapType, 'EXACT_INPUT' | 'EXACT_OUTPUT'> =
         initialAmount === undefined ? 'EXACT_INPUT' : 'EXACT_OUTPUT';
 
-    // Throws straight away if a secret key was passed, where the developer sees it.
-    checkAppId(appId);
+    // What is wrong with the values passed in, if anything. Nothing throws here:
+    // a setup mistake must not take the host page down.
+    const hostname = useHostname();
+    const setupError = useMemo(
+        () => checkPaymentSetup({ appId, recipient, destinationToken, amount: initialAmount, hostname }),
+        [appId, recipient, destinationToken, initialAmount, hostname]
+    );
+    const setupErrorKey = setupError ? setupError.code + ':' + String(setupError.details) : '';
 
-    // Get destination token by name string
-    const destToken = getToken(destinationToken);
-    if (!destToken) {
-        throw new Error(
-            `Invalid destinationToken: "${destinationToken}". ` +
-            `Use a valid token name like "suiUSDC", "arbitrumUSDC", "ethereumUSDC", or "baseETH". ` +
-            `See the supported tokens table in the README.`
-        );
-    }
+    // With an unknown destinationToken there is no token to work with. A stand-in
+    // keeps the rest of the hook well-formed; setupError stops it being used.
+    const destToken = getToken(destinationToken) ?? ALL_TOKENS[0];
 
     // State
     const [paymentState, setPaymentState] = useState<PaymentState>('idle');
     const [quote, setQuote] = useState<QuoteResult | null>(null);
     const [previewQuote, setPreviewQuote] = useState<QuoteResult | null>(null);
-    const [previewError, setPreviewError] = useState<Error | null>(null);
+    const [previewError, setPreviewError] = useState<UniportError | null>(null);
     const [isLoadingPreview, setIsLoadingPreview] = useState(false);
     const [status, setStatus] = useState<StatusResult | null>(null);
-    const [error, setError] = useState<Error | null>(null);
+    const [error, setError] = useState<UniportError | null>(null);
+    const [statusTrouble, setStatusTrouble] = useState(false);
 
     // Selection state
     const [selectedChain, setSelectedChain] = useState<Chain | null>(null);
@@ -169,6 +169,21 @@ export function useUniportPayment(
         callbacksRef.current = { onSuccess, onError };
     });
     const pollPausedUntilRef = useRef(0);
+    const pollFailuresRef = useRef(0);
+    const reportedSetupKeyRef = useRef('');
+
+    // Tell the developer about a setup mistake once, in the console and through onError.
+    useEffect(() => {
+        // The ref outlives React's development-only double run of effects, so
+        // onError is called once per problem there too.
+        if (reportedSetupKeyRef.current === setupErrorKey) return;
+        reportedSetupKeyRef.current = setupErrorKey;
+        if (!setupError) return;
+        reportSetupError(setupError);
+        callbacksRef.current.onError?.(setupError);
+        // Keyed on what the problem is, not on the error object.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [setupErrorKey]);
     // Goes up each time polling stops, so a reply still in flight for a payment
     // that was cancelled or reset is recognised and dropped.
     const pollGenerationRef = useRef(0);
@@ -198,11 +213,23 @@ export function useUniportPayment(
                 previewAbortRef.current = null;
             }
 
-            if (
-                !nextAmount ||
-                !nextSelectedToken ||
-                (swapType !== 'EXACT_OUTPUT' && !nextRefundAddress)
-            ) {
+            if (setupError || !nextAmount || !nextSelectedToken) {
+                setIsLoadingPreview(false);
+                return;
+            }
+
+            // What the payer typed is checked here, so a slip of theirs is never
+            // sent and never blamed on the app.
+            if (swapType === 'EXACT_INPUT') {
+                const typed = checkTypedAmount(nextAmount, nextSelectedToken);
+                if (typed !== 'ok') {
+                    if (typed !== 'incomplete') setPreviewError(typed);
+                    setIsLoadingPreview(false);
+                    return;
+                }
+            }
+
+            if (swapType !== 'EXACT_OUTPUT' && !nextRefundAddress) {
                 setIsLoadingPreview(false);
                 return;
             }
@@ -230,9 +257,9 @@ export function useUniportPayment(
                     if (err instanceof Error && err.name === 'AbortError') {
                         return;
                     }
-                    const previewFailure = normalizeError(
+                    const previewFailure = toUniportErrorFromUnknown(
                         err,
-                        'Failed to fetch estimate'
+                        'Could not fetch an estimate. Please try again.'
                     );
                     setPreviewError(previewFailure);
                     console.warn('Preview quote failed:', previewFailure);
@@ -244,15 +271,17 @@ export function useUniportPayment(
                 }
             }, 250);
         },
-        [appId, destToken, recipient, swapType]
+        [appId, destToken, recipient, swapType, setupError]
     );
 
     const setAmount = useCallback(
         (newAmount: string) => {
             // An app-set amount is the payment target; the payer can't change it.
             if (swapType === 'EXACT_OUTPUT') return;
-            setAmountState(newAmount);
-            schedulePreviewQuote(newAmount, effectiveRefundAddress, selectedToken);
+            // Spaces (from a paste, say) are dropped, so what is checked is what is sent.
+            const typed = newAmount.trim();
+            setAmountState(typed);
+            schedulePreviewQuote(typed, effectiveRefundAddress, selectedToken);
         },
         [effectiveRefundAddress, schedulePreviewQuote, selectedToken, swapType]
     );
@@ -283,6 +312,30 @@ export function useUniportPayment(
     }, [amount, evmDefaultRefundAddress, refundAddress, schedulePreviewQuote]);
 
     // Handle token selection
+    // If the setup becomes wrong while an estimate is on its way (the app
+    // clears `recipient`, say), stop it: no request is made with a bad setup.
+    useEffect(() => {
+        if (!setupError) {
+            // The setup is right (again): pick the estimate back up where it was.
+            if (selectedToken && amount) {
+                schedulePreviewQuote(amount, effectiveRefundAddress, selectedToken);
+            }
+            return;
+        }
+        if (previewDebounceRef.current) {
+            clearTimeout(previewDebounceRef.current);
+            previewDebounceRef.current = null;
+        }
+        if (previewAbortRef.current) {
+            previewAbortRef.current.abort();
+            previewAbortRef.current = null;
+        }
+        setPreviewQuote(null);
+        setPreviewError(null);
+        setIsLoadingPreview(false);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [setupErrorKey]);
+
     const handleTokenSelect = useCallback((token: Token) => {
         setSelectedToken(token);
         setPaymentState('selecting');
@@ -291,12 +344,29 @@ export function useUniportPayment(
 
     // Fetch quote (real, non-dry)
     const fetchQuote = useCallback(async () => {
+        if (setupError) {
+            setError(setupError);
+            setPaymentState('error');
+            return;
+        }
+        if (swapType === 'EXACT_INPUT' && selectedToken) {
+            const typed = checkTypedAmount(amount, selectedToken);
+            if (typed !== 'ok') {
+                setError(typed === 'incomplete'
+                    ? new UniportError({ code: 'INVALID_INPUT', message: 'Enter an amount first.' })
+                    : typed);
+                return;
+            }
+        }
         if (
             !selectedToken ||
             !amount ||
             (swapType !== 'EXACT_OUTPUT' && !effectiveRefundAddress)
         ) {
-            setError(new Error('Missing required fields'));
+            setError(new UniportError({
+                code: 'VALIDATION_ERROR',
+                message: 'Choose a token, an amount and a refund address first.',
+            }));
             return;
         }
 
@@ -318,7 +388,7 @@ export function useUniportPayment(
             setQuote(result);
             setPaymentState('awaiting_deposit');
         } catch (err) {
-            const error = normalizeError(err, 'Failed to get quote');
+            const error = toUniportErrorFromUnknown(err, 'Could not get a quote. Please try again.');
             setError(error);
             setPaymentState('error');
             onError?.(error);
@@ -332,11 +402,14 @@ export function useUniportPayment(
         swapType,
         appId,
         onError,
+        setupError,
     ]);
 
     // Stop polling
     const stopPolling = useCallback(() => {
         pollGenerationRef.current += 1;
+        pollFailuresRef.current = 0;
+        setStatusTrouble(false);
         if (pollingRef.current) {
             clearInterval(pollingRef.current);
             pollingRef.current = null;
@@ -355,6 +428,9 @@ export function useUniportPayment(
                 quote.memo
             );
             if (generation !== pollGenerationRef.current) return;
+            // A check got through: any earlier run of failures is over.
+            pollFailuresRef.current = 0;
+            setStatusTrouble(false);
             setStatus(result);
 
             if (result.status !== lastStatusRef.current) {
@@ -375,19 +451,26 @@ export function useUniportPayment(
                 } else if (result.isComplete) {
                     setPaymentState('error');
                     stopPolling();
-                    const err = new Error(
-                        result.status === 'REFUNDED'
-                            ? 'Payment was refunded'
-                            : 'Payment failed'
-                    );
+                    const refunded = result.status === 'REFUNDED';
+                    const err = new UniportError({
+                        code: refunded ? 'PAYMENT_REFUNDED' : 'PAYMENT_FAILED',
+                        message: refunded ? 'Payment was refunded' : 'Payment failed',
+                        details: result,
+                    });
                     setError(err);
                     callbacksRef.current.onError?.(err);
                 }
             }
         } catch (err) {
             if (generation !== pollGenerationRef.current) return;
-            // Asked to slow down: leave the status alone for half a minute.
-            if (isRateLimitError(err)) pollPausedUntilRef.current = Date.now() + 30_000;
+            if (isRateLimitError(err)) {
+                // Asked to slow down: leave the status alone for half a minute.
+                pollPausedUntilRef.current = Date.now() + 30_000;
+            } else {
+                // Checking carries on; after three failures in a row the payer is told.
+                pollFailuresRef.current += 1;
+                if (pollFailuresRef.current >= 3) setStatusTrouble(true);
+            }
             console.error('Status poll error:', err);
         }
     }, [quote, stopPolling]);
@@ -463,6 +546,8 @@ export function useUniportPayment(
         quote,
         previewQuote,
         previewError,
+        setupError,
+        statusTrouble,
         isLoadingPreview,
         status,
         error,

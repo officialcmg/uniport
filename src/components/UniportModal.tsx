@@ -8,7 +8,8 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useUniportPayment } from '../hooks/useUniportPayment';
 import { CHAINS, getExplorerTxUrl, usesEvmAddress, type ChainId } from '../core/tokens';
 import { UNIPORT_ENS_NAME } from '../core/ens';
-import { formatDisplayAmount, isAppSetupError, isRateLimitError } from '../core/intents';
+import { formatDisplayAmount, errorCode } from '../core/intents';
+import { checkTypedAmount } from '../core/setup';
 import type { UniportModalProps } from '../types';
 
 // ============================================================================
@@ -261,39 +262,16 @@ function UniportMark({ size = 12 }: { size?: number }) {
 /** Lists longer than this get a search box. */
 const SEARCH_THRESHOLD = 8;
 
+/** The sentence a payer is shown for an error. */
 function formatPreviewError(error: Error): string {
-    // These already carry a message written for the payer.
-    if (isAppSetupError(error) || isRateLimitError(error)) {
+    // Every UniportError carries a message written for the payer.
+    if (errorCode(error)) {
         return error.message;
     }
-
     if (error.name === 'AbortError') {
         return 'Estimate request was cancelled. Try again.';
     }
-
-    if (error.message === 'Quote request timed out') {
-        return 'Could not fetch estimate. Please try again.';
-    }
-
-    const normalized = error.message.toLowerCase();
-
-    if (normalized.includes('trustline')) {
-        return 'This Stellar recipient must enable the selected asset before it can receive funds.';
-    }
-
-    if (normalized.includes('recipient is not valid')) {
-        return 'Recipient address does not match the selected destination chain.';
-    }
-
-    if (normalized.includes('refund') && normalized.includes('valid')) {
-        return 'Refund address does not match the source chain.';
-    }
-
-    if (normalized.includes('amount')) {
-        return 'Enter a valid amount to fetch an estimate.';
-    }
-
-    return 'Could not fetch estimate. Check the details and try again.';
+    return 'Something went wrong. Please try again.';
 }
 
 function formatChainLabel(chainId: string): string {
@@ -394,6 +372,10 @@ export function UniportModal({
         payment.amount &&
         (isExactOutput || payment.effectiveRefundAddress)
     );
+    // False while the payer is still typing the amount ("0", "0.").
+    const amountReady =
+        isExactOutput ||
+        (!!payment.selectedToken && checkTypedAmount(payment.amount, payment.selectedToken) === 'ok');
     const canSubmit = !!(
         canPreviewEstimate &&
         payment.previewQuote &&
@@ -760,6 +742,7 @@ export function UniportModal({
                             </span>
                         )}
                         {canPreviewEstimate &&
+                            amountReady &&
                             !payment.isLoadingPreview &&
                             !payment.previewQuote &&
                             !payment.previewError && (
@@ -770,7 +753,7 @@ export function UniportModal({
                     </div>
 
                     {/* Exact-amount warning */}
-                    {!!payment.amount && !isExactOutput && (
+                    {!!payment.amount && !isExactOutput && !!payment.previewQuote && !payment.previewError && (
                         <div style={{ ...warningBox, marginBottom: '20px' }}>
                             <WarningTriangle color={t.warning} />
                             <p style={{ margin: 0, fontSize: '13px', color: t.warningText, lineHeight: 1.55 }}>
@@ -933,6 +916,11 @@ export function UniportModal({
                                         }
                                     </span>
                                 </div>
+                                {payment.statusTrouble && (
+                                    <p role="status" style={{ margin: '10px 0 0', fontSize: '12px', lineHeight: 1.5, color: t.textMuted }}>
+                                        Having trouble checking the status. Your payment is not affected; this will keep trying.
+                                    </p>
+                                )}
                             </div>
                         </>
                     )}
@@ -1048,7 +1036,7 @@ export function UniportModal({
                     Payment failed
                 </h2>
                 <p style={{ margin: '0 0 28px', fontSize: '14px', color: t.textMuted, lineHeight: 1.6 }}>
-                    {payment.error?.message || 'Something went wrong. Please try again.'}
+                    {payment.error ? formatPreviewError(payment.error) : 'Something went wrong. Please try again.'}
                 </p>
                 <button onClick={() => { payment.reset(); setModalStep('chain'); }}
                     style={{ ...primaryBtn(false), background: 'transparent', border: `1.5px solid ${t.border}`, color: t.text }}>
@@ -1060,7 +1048,40 @@ export function UniportModal({
 
     // ── Routing ───────────────────────────────────────────────────────────────
 
+    // ── Setup problem ─────────────────────────────────────────────────────────
+    // The values the app passed in are wrong, so there is nothing a payer can do
+    // here. What is wrong is in the console and was sent to onError.
+
+    const renderSetupErrorStep = () => (
+        <div style={{ position: 'relative' }}>
+            <button style={{ ...iconBtn, position: 'absolute', top: 18, right: 18 }}
+                onClick={handleClose} aria-label="Close"
+                onMouseEnter={e => { e.currentTarget.style.background = t.iconBtnHover; }}
+                onMouseLeave={e => { e.currentTarget.style.background = t.iconBtnBg; }}
+            >
+                <XMark color={t.iconBtnColor} />
+            </button>
+            <div role="alert" style={{ padding: '44px 24px 24px', textAlign: 'center' }}>
+                <div style={{
+                    width: 72, height: 72, borderRadius: '50%',
+                    background: `${t.warning}18`, border: `2px solid ${t.warning}44`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    margin: '0 auto 20px',
+                }}>
+                    <WarningTriangle color={t.warning} />
+                </div>
+                <h2 style={{ margin: '0 0 8px', fontSize: '20px', fontWeight: 700, color: t.text, letterSpacing: '-0.02em' }}>
+                    Payment unavailable
+                </h2>
+                <p style={{ margin: 0, fontSize: '14px', color: t.textMuted, lineHeight: 1.6 }}>
+                    {payment.setupError?.message}
+                </p>
+            </div>
+        </div>
+    );
+
     const renderContent = () => {
+        if (payment.setupError) return renderSetupErrorStep();
         if (isSuccess) return renderSuccessStep();
         if (isError)   return renderErrorStep();
         if (showQR)    return renderPaymentStep();

@@ -7,6 +7,15 @@
 
 import { needsMemoDeposit, type Token } from './tokens';
 import { checkAppId, getUniportConfig } from './config';
+import {
+    SETUP_ERROR_PAYER_MESSAGE,
+    UniportError,
+    fixableByCode,
+    type UniportApiErrorBody,
+    type UniportErrorCode,
+} from './errors';
+
+export * from './errors';
 
 // ============================================================================
 // TYPES
@@ -18,48 +27,6 @@ export type SwapType =
     | 'EXACT_OUTPUT'
     | 'FLEX_INPUT'
     | 'ANY_INPUT';
-
-/** Stable backend error codes returned by Uniport */
-export type UniportErrorCode =
-    | 'VALIDATION_ERROR'
-    | 'QUOTE_FAILED'
-    | 'DEPOSIT_SUBMISSION_FAILED'
-    | 'STATUS_CHECK_FAILED'
-    | 'QUOTE_UNVERIFIED'
-    | 'APP_ID_REQUIRED'
-    | 'APP_NOT_FOUND'
-    | 'ORIGIN_NOT_ALLOWED'
-    | 'RECIPIENT_NOT_ALLOWED'
-    | 'RATE_LIMITED'
-    | 'INTERNAL_ERROR'
-    | 'REQUEST_TIMEOUT'
-    | 'NETWORK_ERROR'
-    | 'UNKNOWN_ERROR';
-
-export interface UniportApiErrorBody {
-    code?: UniportErrorCode;
-    message?: string;
-    details?: unknown;
-}
-
-export class UniportError extends Error {
-    code: UniportErrorCode;
-    details?: unknown;
-    status?: number;
-
-    constructor(params: {
-        code: UniportErrorCode;
-        message: string;
-        details?: unknown;
-        status?: number;
-    }) {
-        super(params.message);
-        this.name = 'UniportError';
-        this.code = params.code;
-        this.details = params.details;
-        this.status = params.status;
-    }
-}
 
 /** Quote request options */
 export interface QuoteOptions {
@@ -117,49 +84,69 @@ function extractDetailMessage(details: unknown): string | undefined {
     return undefined;
 }
 
+/** What the payer is told when the cause is not one they can act on. */
+const GENERIC_PAYER_MESSAGE: Partial<Record<UniportErrorCode, string>> = {
+    QUOTE_FAILED: 'Could not get a quote for this payment. Please try again.',
+    DEPOSIT_SUBMISSION_FAILED: 'Could not report the deposit. Your payment is not affected.',
+    STATUS_CHECK_FAILED: 'Could not check the payment status. Please try again.',
+};
+
+/** What the payer is told for each cause they can act on, or that will pass. */
+function payerMessage(
+    code: string,
+    body: UniportApiErrorBody,
+    originToken?: Pick<Token, 'decimals' | 'symbol'>
+): string | undefined {
+    switch (code) {
+        case 'NO_LIQUIDITY':
+            return 'No route for this amount right now. Try a smaller amount or another network.';
+        case 'AMOUNT_TOO_LOW': {
+            const minimum = body.minimum;
+            let least = '';
+            if (minimum?.amount && originToken) {
+                const amount = fromSmallestUnits(minimum.amount, originToken.decimals);
+                least = ' The minimum is ' + amount + ' ' + originToken.symbol + '.';
+            } else if (minimum?.usd) {
+                least = ' The minimum is $' + minimum.usd + '.';
+            }
+            return 'This amount is too small for this route.' + least;
+        }
+        case 'INVALID_REFUND_ADDRESS':
+            return 'That is not a valid refund address for this network.';
+        case 'QUOTE_UNVERIFIED':
+            return 'Could not confirm this quote. Please try again.';
+        default:
+            return undefined;
+    }
+}
+
 /**
- * Errors about how the app is set up. The backend's message is written for the
- * developer, so it goes to the console; the payer sees a neutral one.
+ * Turns the API's error answer into a UniportError whose message can be shown
+ * to the payer. Exported for tests.
  */
-const APP_SETUP_CODES: ReadonlySet<string> = new Set([
-    'APP_ID_REQUIRED',
-    'APP_NOT_FOUND',
-    'ORIGIN_NOT_ALLOWED',
-    'RECIPIENT_NOT_ALLOWED',
-]);
-
-/** True for errors caused by the app's Uniport setup, which retrying will not fix. */
-export function isAppSetupError(error: unknown): error is UniportError {
-    return APP_SETUP_CODES.has(errorCode(error) ?? '');
-}
-
-/** True when the backend refused a request because too many were sent. */
-export function isRateLimitError(error: unknown): error is UniportError {
-    return errorCode(error) === 'RATE_LIMITED';
-}
-
-// Read the code rather than use instanceof: each entry point of the package is
-// bundled with its own copy of the UniportError class.
-function errorCode(error: unknown): string | undefined {
-    if (typeof error !== 'object' || error === null) return undefined;
-    const code = (error as { code?: unknown }).code;
-    return typeof code === 'string' ? code : undefined;
-}
-
-function toUniportError(
+export function toUniportError(
     body: UniportApiErrorBody,
     fallback: {
         code: UniportErrorCode;
         message: string;
         status: number;
-    }
+    },
+    originToken?: Pick<Token, 'decimals' | 'symbol'>
 ): UniportError {
-    if (body.code && APP_SETUP_CODES.has(body.code)) {
-        console.error(`Uniport [${body.code}]: ${body.message ?? 'The app is not set up correctly.'}`);
+    const detailMessage = extractDetailMessage(body.details);
+    const code = body.code || fallback.code;
+
+    // The app is set up wrongly. The reason is for the developer, so it goes to
+    // the console and to `details`; the payer sees a neutral message.
+    if (fixableByCode(code) === 'developer') {
+        const reason =
+            [body.message, detailMessage].filter(Boolean).join(' ') ||
+            'The app is not set up correctly.';
+        console.error('Uniport [' + code + ']: ' + reason);
         return new UniportError({
-            code: body.code,
-            message: 'Payments are not available on this site right now. Please contact the site owner.',
-            details: body.message,
+            code,
+            message: SETUP_ERROR_PAYER_MESSAGE,
+            details: body.details ?? body.message,
             status: fallback.status,
         });
     }
@@ -171,11 +158,21 @@ function toUniportError(
         });
     }
 
-    const detailMessage = extractDetailMessage(body.details);
+    const forPayer = payerMessage(code, body, originToken);
+    if (!forPayer && detailMessage) {
+        // An unsorted failure: keep 1Click's reference so it can be raised with them.
+        const reference = (body.details as { correlationId?: unknown } | undefined)
+            ?.correlationId;
+        console.error(
+            'Uniport [' + code + ']: ' + detailMessage +
+            (typeof reference === 'string' ? ' (1Click reference ' + reference + ')' : '')
+        );
+    }
     return new UniportError({
-        code: body.code || fallback.code,
-        message: detailMessage || body.message || fallback.message,
-        details: body.details,
+        code,
+        // 1Click's own sentence is in `details`; it is not written for a payer.
+        message: forPayer || GENERIC_PAYER_MESSAGE[fallback.code] || 'Something went wrong. Please try again.',
+        details: body.details ?? body.message,
         status: fallback.status,
     });
 }
@@ -462,7 +459,7 @@ export async function getQuote(options: QuoteOptions): Promise<QuoteResult> {
             }
             throw new UniportError({
                 code: 'REQUEST_TIMEOUT',
-                message: 'Quote request timed out',
+                message: 'That took too long. Please try again.',
             });
         }
         throw error;
@@ -478,7 +475,7 @@ export async function getQuote(options: QuoteOptions): Promise<QuoteResult> {
             code: 'QUOTE_FAILED',
             message: 'Quote failed.',
             status: response.status,
-        });
+        }, swapType === 'EXACT_INPUT' ? originToken : undefined);
     }
 
     const data = await response.json();
@@ -545,7 +542,7 @@ export async function submitDepositTx({ appId, ...body }: {
         if (isAbortError(error)) {
             throw new UniportError({
                 code: 'REQUEST_TIMEOUT',
-                message: 'Deposit submission timed out',
+                message: 'Reporting the deposit took too long. Your payment is not affected.',
             });
         }
         throw error;
@@ -591,7 +588,7 @@ export async function getExecutionStatus(
         if (isAbortError(error)) {
             throw new UniportError({
                 code: 'REQUEST_TIMEOUT',
-                message: 'Status check timed out',
+                message: 'Checking the payment status took too long. Please try again.',
             });
         }
         throw error;
