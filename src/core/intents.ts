@@ -542,7 +542,7 @@ export async function submitDepositTx({ appId, ...body }: {
         if (isAbortError(error)) {
             throw new UniportError({
                 code: 'REQUEST_TIMEOUT',
-                message: 'Deposit submission timed out',
+                message: 'Reporting the deposit took too long. Your payment is not affected.',
             });
         }
         throw error;
@@ -588,7 +588,7 @@ export async function getExecutionStatus(
         if (isAbortError(error)) {
             throw new UniportError({
                 code: 'REQUEST_TIMEOUT',
-                message: 'Status check timed out',
+                message: 'Checking the payment status took too long. Please try again.',
             });
         }
         throw error;

@@ -174,6 +174,10 @@ test('an amount the payer types', () => {
         assert.equal(result.code, 'INVALID_INPUT');
         assert.equal(result.fixableBy, 'payer');
     }
+    // The hook trims before it checks and sends, so the check sees no padding;
+    // on its own it treats padding as whitespace around a number.
+    assert.equal(checkTypedAmount(' 5 ', usdc), 'ok');
+    assert.equal(checkTypedAmount('5 0', usdc) instanceof UniportError, true);
     const tooFine = checkTypedAmount('0.0000001', usdc);
     assert.ok(tooFine instanceof UniportError);
     assert.equal(tooFine.message, 'USDC has at most 6 decimal places.');

@@ -213,12 +213,7 @@ export function useUniportPayment(
                 previewAbortRef.current = null;
             }
 
-            if (
-                setupError ||
-                !nextAmount ||
-                !nextSelectedToken ||
-                (swapType !== 'EXACT_OUTPUT' && !nextRefundAddress)
-            ) {
+            if (setupError || !nextAmount || !nextSelectedToken) {
                 setIsLoadingPreview(false);
                 return;
             }
@@ -232,6 +227,11 @@ export function useUniportPayment(
                     setIsLoadingPreview(false);
                     return;
                 }
+            }
+
+            if (swapType !== 'EXACT_OUTPUT' && !nextRefundAddress) {
+                setIsLoadingPreview(false);
+                return;
             }
 
             setIsLoadingPreview(true);
@@ -259,7 +259,7 @@ export function useUniportPayment(
                     }
                     const previewFailure = toUniportErrorFromUnknown(
                         err,
-                        'Failed to fetch estimate'
+                        'Could not fetch an estimate. Please try again.'
                     );
                     setPreviewError(previewFailure);
                     console.warn('Preview quote failed:', previewFailure);
@@ -278,8 +278,10 @@ export function useUniportPayment(
         (newAmount: string) => {
             // An app-set amount is the payment target; the payer can't change it.
             if (swapType === 'EXACT_OUTPUT') return;
-            setAmountState(newAmount);
-            schedulePreviewQuote(newAmount, effectiveRefundAddress, selectedToken);
+            // Spaces (from a paste, say) are dropped, so what is checked is what is sent.
+            const typed = newAmount.trim();
+            setAmountState(typed);
+            schedulePreviewQuote(typed, effectiveRefundAddress, selectedToken);
         },
         [effectiveRefundAddress, schedulePreviewQuote, selectedToken, swapType]
     );
@@ -313,7 +315,13 @@ export function useUniportPayment(
     // If the setup becomes wrong while an estimate is on its way (the app
     // clears `recipient`, say), stop it: no request is made with a bad setup.
     useEffect(() => {
-        if (!setupError) return;
+        if (!setupError) {
+            // The setup is right (again): pick the estimate back up where it was.
+            if (selectedToken && amount) {
+                schedulePreviewQuote(amount, effectiveRefundAddress, selectedToken);
+            }
+            return;
+        }
         if (previewDebounceRef.current) {
             clearTimeout(previewDebounceRef.current);
             previewDebounceRef.current = null;
@@ -340,6 +348,15 @@ export function useUniportPayment(
             setError(setupError);
             setPaymentState('error');
             return;
+        }
+        if (swapType === 'EXACT_INPUT' && selectedToken) {
+            const typed = checkTypedAmount(amount, selectedToken);
+            if (typed !== 'ok') {
+                setError(typed === 'incomplete'
+                    ? new UniportError({ code: 'INVALID_INPUT', message: 'Enter an amount first.' })
+                    : typed);
+                return;
+            }
         }
         if (
             !selectedToken ||
@@ -371,7 +388,7 @@ export function useUniportPayment(
             setQuote(result);
             setPaymentState('awaiting_deposit');
         } catch (err) {
-            const error = toUniportErrorFromUnknown(err, 'Failed to get quote');
+            const error = toUniportErrorFromUnknown(err, 'Could not get a quote. Please try again.');
             setError(error);
             setPaymentState('error');
             onError?.(error);
